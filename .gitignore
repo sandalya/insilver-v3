@@ -1,6 +1,18 @@
-.env
-venv/
+# Локальні фото — не в git
+data/photos/site/
+data/photos/channel_photos/
+
+# Логи
+logs/
+
+# Python
 __pycache__/
 *.pyc
+*.pyo
+
+# Env
+.env
+
+# PID
 bot.pid
-logs/*.log
+venv/

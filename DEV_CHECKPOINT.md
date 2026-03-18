@@ -1,103 +1,84 @@
 # InSilver v3 — DEV CHECKPOINT
 **Дата:** 2026-03-18
-**Статус:** Фундамент готовий, бот живий
+**Статус:** Фаза 1+2 ЗАВЕРШЕНА — бот живий, пошук + фото працюють
 
-## ЩО ЗРОБЛЕНО
-- v2 заморожено в git (snapshot commit)
-- Створено чисту структуру insilver-v3/
-- Single-process lock (core/lock.py) — дублікатів більше не буде
-- Перенесено дані: 2360 постів каталогу, знання, замовлення, баланс срібла
-- Системний промпт з 20 правилами консультанта (core/prompt.py)
-- Працюючий AI консультант (core/ai.py — claude-haiku)
-- Telegram бот (bot/client.py) — /start + обробка повідомлень
-- Systemd сервіс insilver-v3.service — автозапуск при ребуті
-- Логування в logs/bot.log
+## ЩО ЗРОБЛЕНО СЬОГОДНІ
+- **Пошук товарів** (core/catalog.py) — keyword+синоніми по 484 товарах з сайту
+- **Скрейп сайту** (scripts/scrape_site.py) — 484 товари з insilver.pp.ua
+- **Завантаження фото** (scripts/download_photos.py)
+  → Playwright перехоплює фото під час рендерингу (Google CDN блокує прямі запити)
+  → 2675 фото збережено локально в data/photos/site/
+  → Логотип InSilver відфільтрований по розміру (61514 bytes)
+- **Відправка фото** в Telegram — медіагрупа або одне фото з підписом
+- **Вага товарів** розпарсена для 229/484 (решта — кулони/хрестики без ваги)
+- **Чекпоінт** оновлено
 
 ## СТАН СИСТЕМИ
 - Бот: systemd insilver-v3 — active (running)
 - Модель: claude-haiku-4-5-20251001
-- Дані: /data/photos/catalog.json (2360 постів), /data/photos/index.json (1028)
-- Фото: ВІДСУТНІ локально — потрібен ре-скрейп групи Влада з збереженням file_id
+- Каталог: data/site_catalog.json (484 товари)
+- Фото: data/photos/site/ (2675 файлів)
 
 ## СТРУКТУРА ПРОЕКТУ
 ```
 insilver-v3/
 ├── core/
-│   ├── config.py      — налаштування, шляхи
+│   ├── config.py      — налаштування (SITE_CATALOG тощо)
 │   ├── lock.py        — захист від дублікатів
-│   ├── prompt.py      — системний промпт консультанта
-│   └── ai.py          — Anthropic API
+│   ├── prompt.py      — системний промпт (20 правил)
+│   ├── ai.py          — Anthropic API (haiku)
+│   └── catalog.py     — пошук по site_catalog.json
 ├── bot/
-│   └── client.py      — Telegram handlers
+│   └── client.py      — handlers + відправка фото
+├── scripts/
+│   ├── scrape_site.py      — скрейп insilver.pp.ua
+│   └── download_photos.py  — завантаження фото через Playwright
 ├── data/
-│   ├── photos/catalog.json   — 2360 постів з TG групи
-│   ├── photos/index.json     — 1028 оброблених записів
+│   ├── site_catalog.json      — 484 товари (основний каталог)
+│   ├── photos/site/           — 2675 локальних фото
+│   ├── photos/catalog.json    — TG каталог (резерв, 2399 постів)
 │   ├── knowledge/knowledge.json
 │   ├── orders/orders.json
 │   └── silver.json
 └── main.py
 ```
 
-## НАСТУПНА СЕСІЯ — ФАЗА 2
+## НАСТУПНА СЕСІЯ — ФАЗА 3
 Пріоритети по порядку:
 
-1. **Пошук товарів** — коли клієнт описує що хоче, бот шукає в catalog.json
-   і відповідає описом товару (поки без фото)
-   Файл: core/catalog.py (новий)
+1. **Форма замовлення в боті** — кнопка "Замовити" під фото товару
+   → ConversationHandler: ім'я → телефон → місто → доставка → коментар
+   → Зберігати в orders.json
+   → Сповіщення Владу в TG
+   Файли: bot/order.py (новий)
 
 2. **База знань** — /admin learn (текст + фото), перегляд, видалення
-   Файл: core/knowledge.py (новий) + bot/admin.py (новий)
+   Файли: core/knowledge.py + bot/admin.py
 
-3. **Ре-скрейп фото** — окремий скрипт який проходить по catalog.json,
-   знаходить пости в TG групі Влада і зберігає file_id
-   ВАЖЛИВО: зберігати file_id а не локальні файли
+3. **Оновлення каталогу** — /admin update запускає scrape + download
+   Або крон раз на тиждень
+
+4. **Збереження історії в БД** — зараз скидається при рестарті
 
 ## КОРИСНІ КОМАНДИ
 ```bash
-# Статус
 sudo systemctl status insilver-v3
-
-# Перезапуск
 sudo systemctl restart insilver-v3
-
-# Логи
 tail -f ~/.openclaw/workspace/insilver-v3/logs/bot.log
-
-# Зупинити
-sudo systemctl stop insilver-v3
+python3 scripts/scrape_site.py        # оновити каталог
+python3 scripts/download_photos.py    # докачати нові фото
 ```
 
 ## ЗМІННІ СЕРЕДОВИЩА (.env)
-- TELEGRAM_TOKEN — токен бота консультанта
+- TELEGRAM_TOKEN — токен бота-консультанта
 - ANTHROPIC_API_KEY — ключ Anthropic
 - ADMIN_IDS — ID адмінів через кому
+- OWNER_CHAT_ID=189793675
+- MONITOR_CHAT_ID=-1003891541800
 
 ## ВІДОМІ ПРОБЛЕМИ / НОТАТКИ
-- parse_mode="Markdown" увімкнено в bot/client.py
-- Промпт інструктує бота бути гендерно нейтральним
-- Історія розмови зберігається в пам'яті (ctx.user_data) — скидається при рестарті бота
-  → В фазі 3 треба перенести в БД
-
-## КІТ — АРХІТЕКТУРА (наступна сесія)
-**Концепція:** TG бот який отримує задачу від тебе → сам пише код → тестує → рапортує
-
-**Як працює:**
-1. Ти пишеш Коту в TG: "додай пошук товарів"
-2. Кіт читає DEV_CHECKPOINT.md і структуру проекту
-3. Пише код в insilver-v3/
-4. Запускає тести
-5. Якщо OK — робить git commit і повідомляє тебе
-6. Якщо помилка — показує що саме і пропонує рішення
-
-**Технічно:**
-- Окремий токен (є в v2 .env як openclaw-kit токен — перевірити)
-- Anthropic API з claude-sonnet (складніші задачі ніж консультант)
-- Доступ до shell через subprocess (писати файли, запускати тести)
-- Читає/пише DEV_CHECKPOINT.md як пам'ять між сесіями
-
-**Безпека:**
-- Працює тільки в /home/sashok/.openclaw/workspace/insilver-v3/
-- Не може виходити за межі цієї папки
-- Всі дії логуються
-
-**Пріоритет:** Фаза 3 — але токен підготувати вже зараз
+- Google CDN блокує прямі HTTP запити → Playwright обходить перехопленням
+- Фото на міліметрівці — це норма для ювелірки
+- Логотип (61514 bytes) фільтрується в client.py константою LOGO_SIZE
+- Історія розмови в пам'яті — скидається при рестарті (фаза 4: БД)
+- TG фото групи Влада — недоступні через API обмеження, не використовуємо

@@ -20,3 +20,4 @@ SILVER_FILE = os.path.join(DATA_DIR, "silver.json")
 
 # Single process lock
 PID_FILE = os.path.join(BASE_DIR, "bot.pid")
+SITE_CATALOG = os.path.join(DATA_DIR, "site_catalog.json")
