@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""InSilver Bot v3 — точка входу."""
-import asyncio
+"""InSilver Bot v3."""
 import logging
 import os
+from telegram.ext import Application
 from core.lock import acquire_lock
-from core.config import LOGS_DIR
+from core.config import BOT_TOKEN, LOGS_DIR
+from bot.client import setup_handlers
 
-# Логування
 os.makedirs(LOGS_DIR, exist_ok=True)
 logging.basicConfig(
     level=logging.INFO,
@@ -18,11 +18,15 @@ logging.basicConfig(
 )
 log = logging.getLogger("main")
 
-async def main():
+def main():
     acquire_lock()
     log.info("🚀 InSilver v3 стартує...")
-    # TODO: запуск бота
-    log.info("✅ Готово")
+
+    app = Application.builder().token(BOT_TOKEN).build()
+    setup_handlers(app)
+
+    log.info("✅ Бот запущений. Очікуємо повідомлення...")
+    app.run_polling(drop_pending_updates=True)
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
