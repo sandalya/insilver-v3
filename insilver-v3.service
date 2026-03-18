@@ -1,0 +1,15 @@
+[Unit]
+Description=InSilver Bot v3
+After=network.target
+
+[Service]
+Type=simple
+User=sashok
+WorkingDirectory=/home/sashok/.openclaw/workspace/insilver-v3
+EnvironmentFile=/home/sashok/.openclaw/workspace/insilver-v3/.env
+ExecStart=/home/sashok/.openclaw/workspace/insilver-v3/venv/bin/python3 main.py
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
