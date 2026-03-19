@@ -2,6 +2,7 @@
 core/catalog.py — пошук товарів по site_catalog.json (insilver.pp.ua)
 """
 import json
+import html
 import re
 import logging
 from typing import Optional
@@ -26,11 +27,11 @@ def load_catalog() -> list:
 
 SYNONYMS = {
     "ланцюг":     ["ланцюжок", "цепочка", "chain"],
-    "ланцюжок":   ["ланцюг", "цепочка"],
+    "ланцюжок":   ["ланцюг", "цепочка", "ланцюжки", "ланцюгів"],
     "кільце":     ["кольцо", "перстень", "перстінь"],
     "перстень":   ["кільце", "кольцо", "перстінь"],
     "сережки":    ["серьги", "сережка"],
-    "браслет":    ["браслет"],
+    "браслет":    ["браслети", "браслетів"],
     "хрест":      ["хрестик", "крест", "крестик"],
     "хрестик":    ["хрест", "крестик"],
     "підвіска":   ["кулон", "підвісочка"],
@@ -60,6 +61,10 @@ def _score_item(item: dict, keywords: list) -> int:
     title    = (item.get("title") or "").lower()
     category = (item.get("category") or "").lower()
     subcat   = (item.get("subcategory") or "").lower()
+    # decode HTML entities перед пошуком
+    title    = html.unescape(title)
+    category = html.unescape(category)
+    subcat   = html.unescape(subcat)
     search_text = f"{title} {category} {subcat}"
     score = 0
     for kw in keywords:
@@ -83,7 +88,7 @@ def keyword_search(query: str, top_n: int = 3) -> list:
     return [i for _, i in scored[:top_n]]
 
 def format_item_text(item: dict) -> str:
-    title    = item.get("title", "")
+    title    = html.unescape(item.get("title", ""))
     category = item.get("category", "")
     subcat   = item.get("subcategory", "")
     params   = item.get("params", {})
