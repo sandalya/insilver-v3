@@ -1,5 +1,6 @@
 """Обробник повідомлень від клієнтів."""
 import logging
+import time
 from telegram import Update, InputMediaPhoto, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 from core.config import BOT_TOKEN, ADMIN_IDS
@@ -7,6 +8,7 @@ from core.ai import ask_ai
 from core.order_context import has_order_intent
 from core.catalog import search_catalog, format_item_text
 from core.health import health_checker
+from core.conversation_logger import log_user_message, log_bot_response, log_order_action, log_error_interaction
 from bot.order import build_order_handler
 
 log = logging.getLogger("bot.client")
@@ -81,13 +83,18 @@ async def send_item_with_photo(update: Update, item: dict):
 async def cmd_start(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     name = user.first_name or "друже"
-    log.info(f"START від {user.id} ({user.first_name})")
+    username = user.username or user.first_name or "anonymous"
     
+    log.info(f"START від {user.id} ({username})")
     health_checker.increment_messages()
     
-    await update.message.reply_text(
-        f"Вітаємо, {name}\n\nВи звернулись до майстерні InSilver — виготовляємо срібні прикраси на замовлення.\n\nЧим можу допомогти?"
-    )
+    response = f"Вітаємо, {name}\n\nВи звернулись до майстерні InSilver — виготовляємо срібні прикраси на замовлення.\n\nЧим можу допомогти?"
+    
+    # Логування
+    log_user_message(user.id, username, "/start")
+    log_bot_response(user.id, username, response)
+    
+    await update.message.reply_text(response)
 
 
 async def handle_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
@@ -95,8 +102,9 @@ async def handle_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     try:
         user = update.effective_user
         text = update.message.text
-        log.info(f"MSG від {user.id}: {text[:80]}")
+        username = user.username or user.first_name or "anonymous"
         
+        log.info(f"MSG від {user.id}: {text[:80]}")
         health_checker.increment_messages()
 
         # Якщо клієнт в процесі замовлення — не втручаємось
@@ -110,9 +118,15 @@ async def handle_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
             items, found = search_catalog(text)
         except Exception as e:
             log.error(f"Помилка пошуку в каталозі: {e}")
+            log_error_interaction(user.id, username, f"Catalog search error: {e}", text[:50])
             items, found = [], False
 
+        # Логування повідомлення користувача
+        log_user_message(user.id, username, text, len(items) if found else 0)
+
         response = ""
+        ai_time = 0
+        has_photos = False
 
         if found:
             log.info(f"Каталог: знайдено {len(items)} товарів для '{text[:40]}'")
@@ -124,30 +138,51 @@ async def handle_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
                     f"Коротко представ ці товари (1-2 речення), скажи що зараз покажеш фото. "
                     f"Не вигадуй деталей яких немає."
                 )
+                
+                start_time = time.time()
                 response = await ask_ai(user.id, augmented, ctx.user_data.get("history", []))
+                ai_time = time.time() - start_time
+                has_photos = True
+                
                 await update.message.reply_text(response, parse_mode="Markdown")
                 
                 # Send photos with error recovery
+                photos_sent = 0
                 for item in items:
                     try:
                         await ctx.bot.send_chat_action(update.effective_chat.id, "upload_photo")
                         await send_item_with_photo(update, item)
+                        photos_sent += 1
                     except Exception as e:
                         log.error(f"Помилка відправки фото для товару {item.get('title', 'N/A')}: {e}")
+                        log_error_interaction(user.id, username, f"Photo send error: {e}", item.get('title', 'N/A'))
                         # Continue with other items
+                        
+                log.info(f"Надіслано фото: {photos_sent}/{len(items)}")
+                
             except Exception as e:
                 log.error(f"Помилка обробки знайденних товарів: {e}")
+                log_error_interaction(user.id, username, f"Items processing error: {e}", text[:50])
                 response = "Вибачте, виникла проблема з обробкою результатів пошуку. Спробуйте ще раз."
+                ai_time = 0
                 await update.message.reply_text(response)
         else:
             log.info(f"Каталог: нічого не знайдено для '{text[:40]}'")
             try:
+                start_time = time.time()
                 response = await ask_ai(user.id, text, ctx.user_data.get("history", []))
+                ai_time = time.time() - start_time
                 await update.message.reply_text(response, parse_mode="Markdown")
             except Exception as e:
                 log.error(f"Помилка AI відповіді: {e}")
+                log_error_interaction(user.id, username, f"AI response error: {e}", text[:50])
                 response = "Вибачте, зараз не можу обробити ваш запит. Спробуйте ще раз пізніше."
+                ai_time = 0
                 await update.message.reply_text(response)
+
+        # Логування відповіді бота
+        if response:
+            log_bot_response(user.id, username, response, ai_time, has_photos)
 
         # Update history safely
         try:
@@ -161,6 +196,7 @@ async def handle_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         # Show order button if needed
         try:
             if has_order_intent(text):
+                log_order_action(user.id, username, "order_button_shown", {"trigger": text[:50]})
                 await update.message.reply_text(
                     "Готові оформити замовлення? 👇",
                     reply_markup=InlineKeyboardMarkup([[
@@ -172,6 +208,7 @@ async def handle_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
             
     except Exception as e:
         log.error(f"💥 Критична помилка в handle_message: {e}")
+        log_error_interaction(user.id, user.username or "unknown", f"Critical error: {e}", text[:50] if 'text' in locals() else "unknown")
         try:
             await update.message.reply_text(
                 "Вибачте, сталася технічна помилка. Спробуйте ще раз або зверніться до @Vlad_InSilver"
@@ -196,11 +233,18 @@ async def error_handler(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
             pass  # Can't send message
 
 def setup_handlers(app: Application):
+    # Import admin handlers
+    from bot.admin import create_admin_handlers
+    
     # Add error handler
     app.add_error_handler(error_handler)
+    
+    # Add admin handlers (високий пріоритет)
+    for handler in create_admin_handlers():
+        app.add_handler(handler)
     
     # Add regular handlers
     app.add_handler(build_order_handler())
     app.add_handler(CommandHandler("start", cmd_start))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-    log.info("Handlers зареєстровано")
+    log.info("Handlers зареєстровано (включно з admin)")
