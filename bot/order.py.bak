@@ -26,8 +26,8 @@ ORDERS_FILE = Path("data/orders/orders.json")
 # ─── Стани ────────────────────────────────────────────────────────────────────
 # Режим A
 A_NAME, A_PHONE, A_CITY, A_COMMENT = range(4)
-# Режим B — використовуємо ОДИН стан B_STEP для всього
-B_TYPE, B_STEP = range(4, 6)
+# Режим B
+B_TYPE, B_STEP, B_TEXT = range(4, 7)
 
 
 # ─── Збереження ───────────────────────────────────────────────────────────────
@@ -52,6 +52,7 @@ async def notify_owner(ctx, order: dict, user):
     if order.get('city'):
         lines.append(f"📍 {order['city']}")
 
+    # Деталі виробу якщо є
     detail_keys = {
         'item_title': '🏷 Товар', 'type': 'Тип', 'weaving': 'Плетіння',
         'length': 'Довжина', 'weight': 'Маса', 'plating': 'Покриття',
@@ -84,6 +85,7 @@ async def notify_owner(ctx, order: dict, user):
 # ════════════════════════════════════════════════════════════════════════════════
 
 async def mode_a_start(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    """Вхід через кнопку під товаром."""
     query = update.callback_query
     await query.answer()
 
@@ -141,32 +143,36 @@ async def a_skip_comment(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 
 
 # ════════════════════════════════════════════════════════════════════════════════
-# РЕЖИМ B — повна анкета
-# Ключова зміна: використовуємо ОДИН стан B_STEP який приймає і кнопки і текст.
-# b_send_step завжди повертає B_STEP — ніякого B_TEXT більше нема.
+# РЕЖИМ B — повна анкета (/order або кнопка "Оформити замовлення")
 # ════════════════════════════════════════════════════════════════════════════════
 
 async def mode_b_start(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    """Вхід через /order або кнопку Оформити."""
+    # Підтримуємо і команду і callback
     if update.callback_query:
         await update.callback_query.answer()
         reply = update.callback_query.message.reply_text
     else:
         reply = update.message.reply_text
 
+    # Витягуємо контекст з розмови
     history = ctx.user_data.get("history", [])
     prefilled = extract_order_context(history)
 
     ctx.user_data["order"] = {
         "_mode": "B",
         "_prefilled": prefilled,
-        "_steps": [],
+        "_steps": [],       # заповниться після вибору типу
         "_step_idx": 0,
         "_filled": {},
     }
 
+    # Якщо тип вже відомий з розмови — пропускаємо вибір типу
     if prefilled.get("type"):
         return await b_init_steps(update, ctx, prefilled["type"], reply)
 
+    # Інакше питаємо тип
+    from telegram import InlineKeyboardMarkup
     buttons = get_keyboard(TYPE_STEP, step_index=0)
     await reply(
         TYPE_STEP["text"],
@@ -176,6 +182,7 @@ async def mode_b_start(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 
 
 async def b_init_steps(update, ctx, product_type: str, reply_func=None):
+    """Ініціалізує кроки після визначення типу."""
     order = ctx.user_data["order"]
     prefilled = order["_prefilled"]
     order["type"] = product_type
@@ -188,35 +195,25 @@ async def b_init_steps(update, ctx, product_type: str, reply_func=None):
     if not steps:
         return await finish_order(update, ctx)
 
-    result = await b_send_step(update, ctx, reply_func)
-    if result == -1:
-        return result
-    return B_STEP
+    return await b_send_step(update, ctx, reply_func)
 
 
 async def b_send_step(update, ctx, reply_func=None):
-    """Відправляє поточний крок. Завжди повертає B_STEP."""
+    """Відправляє поточний крок анкети."""
     order = ctx.user_data["order"]
     steps = order["_steps"]
     idx = order["_step_idx"]
 
     if idx >= len(steps):
-        result = await finish_order(update, ctx)
-        return result
+        return await finish_order(update, ctx)
 
     step = steps[idx]
     filled = order.get("_filled", {})
     text = format_step_message(step, idx, len(steps), filled)
     buttons = get_keyboard(step, step_index=idx)
-    keyboard = InlineKeyboardMarkup(buttons) if buttons else None
 
-    # Якщо крок текстовий — додаємо кнопки навігації окремо
-    if not buttons:
-        nav_row = []
-        if idx > 0:
-            nav_row.append(InlineKeyboardButton("⬅️ Назад", callback_data="f:back"))
-        nav_row.append(InlineKeyboardButton("❌ Скасувати", callback_data="f:cancel"))
-        keyboard = InlineKeyboardMarkup([nav_row])
+    from telegram import InlineKeyboardMarkup
+    keyboard = InlineKeyboardMarkup(buttons) if buttons else None
 
     if reply_func:
         await reply_func(text, reply_markup=keyboard, parse_mode="Markdown")
@@ -225,15 +222,15 @@ async def b_send_step(update, ctx, reply_func=None):
     else:
         await update.message.reply_text(text, reply_markup=keyboard, parse_mode="Markdown")
 
-    return B_STEP
+    # Якщо текстовий ввід — чекаємо на B_TEXT
+    return B_TEXT if not buttons else B_STEP
 
 
 async def b_handle_button(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    """Обробляє натискання кнопки в анкеті."""
     query = update.callback_query
     await query.answer()
-    data = query.data
-    if data not in ("f:cancel", "f:back") and "order" not in ctx.user_data:
-        return ConversationHandler.END
+    data = query.data  # f:{key}:{idx} або f:back або f:cancel
 
     if data == "f:cancel":
         return await cancel_order(update, ctx)
@@ -242,15 +239,12 @@ async def b_handle_button(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         order = ctx.user_data["order"]
         if order["_step_idx"] > 0:
             order["_step_idx"] -= 1
+            # Видаляємо останнє заповнене
             step_key = order["_steps"][order["_step_idx"]]["key"]
             order["_filled"].pop(step_key, None)
-            order.pop(step_key, None)
-        else:
-            # На першому кроці "Назад" = скасування
-            return await cancel_order(update, ctx)
-        await b_send_step(update, ctx)
-        return B_STEP
+        return await b_send_step(update, ctx)
 
+    # f:{key}:{idx}
     parts = data.split(":")
     if len(parts) == 3 and parts[0] == "f":
         step_key = parts[1]
@@ -258,38 +252,35 @@ async def b_handle_button(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 
         order = ctx.user_data["order"]
         steps = order["_steps"]
+        current_step = steps[order["_step_idx"]]
 
+        # Якщо це крок вибору типу
         if step_key == "type":
             options = TYPE_STEP["options"]
             raw = options[opt_idx]
             product_type = normalize_type(raw)
             return await b_init_steps(update, ctx, product_type)
 
-        current_step = steps[order["_step_idx"]]
+        # Звичайний крок
         options = current_step.get("options", [])
         if opt_idx < len(options):
             order["_filled"][step_key] = options[opt_idx]
             order[step_key] = options[opt_idx]
 
         order["_step_idx"] += 1
-        result = await b_send_step(update, ctx)
-        if result == -1:
-            return result
-        return B_STEP
+        return await b_send_step(update, ctx)
 
     return B_STEP
 
 
 async def b_handle_text(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    if "order" not in ctx.user_data:
-        return ConversationHandler.END
+    """Обробляє текстовий ввід в анкеті."""
     order = ctx.user_data["order"]
     steps = order["_steps"]
     idx = order["_step_idx"]
 
     if idx >= len(steps):
-        result = await finish_order(update, ctx)
-        return result
+        return await finish_order(update, ctx)
 
     step = steps[idx]
     step_key = step["key"]
@@ -299,14 +290,11 @@ async def b_handle_text(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     order[step_key] = value
     order["_step_idx"] += 1
 
-    result = await b_send_step(update, ctx)
-    if result == -1:
-        return result
-    return B_STEP
+    return await b_send_step(update, ctx)
 
 
 # ════════════════════════════════════════════════════════════════════════════════
-# ФІНАЛ
+# ФІНАЛ — спільний для обох режимів
 # ════════════════════════════════════════════════════════════════════════════════
 
 async def finish_order(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
@@ -320,15 +308,16 @@ async def finish_order(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     order["delivery"] = "Нова Пошта"
     order["created_at"] = datetime.now().isoformat()
 
+    # Очищаємо службові ключі
     for k in ["_mode", "_prefilled", "_steps", "_step_idx", "_filled"]:
         order.pop(k, None)
 
-    # Витягуємо ім'я з контакту якщо є
-    if order.get("contact") and not order.get("name"):
-        order["name"] = order["contact"]
-
     save_order(order)
     log.info(f"Замовлення #{order['id']} від {user.id}")
+
+    # Витягуємо контакт з поля contact якщо є (режим B)
+    if order.get("contact") and not order.get("name"):
+        order["name"] = order["contact"]
 
     msg = update.callback_query.message if update.callback_query else update.message
     await msg.reply_text(
@@ -373,11 +362,15 @@ def build_order_handler() -> ConversationHandler:
                 MessageHandler(filters.TEXT & ~filters.COMMAND, a_comment),
                 CommandHandler("skip", a_skip_comment),
             ],
-            # Режим B — один стан для всього
+            # Режим B
             B_TYPE: [CallbackQueryHandler(b_handle_button, pattern=r"^f:")],
             B_STEP: [
                 CallbackQueryHandler(b_handle_button, pattern=r"^f:"),
                 MessageHandler(filters.TEXT & ~filters.COMMAND, b_handle_text),
+            ],
+            B_TEXT: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, b_handle_text),
+                CallbackQueryHandler(b_handle_button, pattern=r"^f:"),
             ],
         },
         fallbacks=[
