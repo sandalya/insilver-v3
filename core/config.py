@@ -1,7 +1,8 @@
 import os
 from dotenv import load_dotenv
 
-load_dotenv()
+# Завантажити .env з директорії проекту (з override)
+load_dotenv('/home/sashok/.openclaw/workspace/insilver-v3/.env', override=True)
 
 BOT_TOKEN = os.getenv("TELEGRAM_TOKEN")
 ANTHROPIC_KEY = os.getenv("ANTHROPIC_API_KEY")

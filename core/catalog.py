@@ -5,25 +5,81 @@ import json
 import html
 import re
 import logging
+import os
+import time
+import gc
 from typing import Optional
+from pathlib import Path
+
 log = logging.getLogger("core.catalog")
 
+# Memory management
 _catalog_cache: Optional[list] = None
+_cache_time: Optional[float] = None
+_cache_file_mtime: Optional[float] = None
+CACHE_REFRESH_INTERVAL = 3600  # 1 hour
 
 def load_catalog() -> list:
-    global _catalog_cache
-    if _catalog_cache is not None:
-        return _catalog_cache
+    """Load catalog with smart caching and memory management."""
+    global _catalog_cache, _cache_time, _cache_file_mtime
+    
     from core.config import SITE_CATALOG
+    current_time = time.time()
+    
     try:
+        # Check if file exists and get modification time
+        if not os.path.exists(SITE_CATALOG):
+            log.warning(f"Каталог файл не знайдено: {SITE_CATALOG}")
+            return []
+            
+        file_mtime = os.path.getmtime(SITE_CATALOG)
+        
+        # Check if cache is valid
+        cache_valid = (
+            _catalog_cache is not None and
+            _cache_time is not None and
+            _cache_file_mtime == file_mtime and
+            (current_time - _cache_time) < CACHE_REFRESH_INTERVAL
+        )
+        
+        if cache_valid:
+            return _catalog_cache
+        
+        # Load catalog from file
+        log.info("Перезавантаження каталогу...")
         with open(SITE_CATALOG, "r", encoding="utf-8") as f:
             data = json.load(f)
+        
+        # Clear old cache and update
+        if _catalog_cache is not None:
+            _catalog_cache.clear()
+            gc.collect()  # Force garbage collection
+            
         _catalog_cache = data.get("items", [])
+        _cache_time = current_time
+        _cache_file_mtime = file_mtime
+        
         log.info(f"Каталог сайту завантажено: {len(_catalog_cache)} товарів")
         return _catalog_cache
+        
     except Exception as e:
         log.error(f"Помилка завантаження каталогу: {e}")
+        # Return cached version if available, even if stale
+        if _catalog_cache is not None:
+            log.warning("Використовуємо застарілу версію кешу")
+            return _catalog_cache
         return []
+
+def clear_catalog_cache():
+    """Manually clear catalog cache to free memory."""
+    global _catalog_cache, _cache_time, _cache_file_mtime
+    if _catalog_cache:
+        _catalog_cache.clear()
+        _catalog_cache = None
+        _cache_time = None
+        _cache_file_mtime = None
+        gc.collect()
+        log.info("Кеш каталогу очищено")
 
 SYNONYMS = {
     "ланцюг":     ["ланцюжок", "цепочка", "chain"],

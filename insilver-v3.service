@@ -1,6 +1,9 @@
 [Unit]
-Description=InSilver Bot v3
-After=network.target
+Description=InSilver Bot v3 - Jewelry Consultant
+After=network-online.target
+Wants=network-online.target
+StartLimitInterval=600
+StartLimitBurst=3
 
 [Service]
 Type=simple
@@ -8,8 +11,25 @@ User=sashok
 WorkingDirectory=/home/sashok/.openclaw/workspace/insilver-v3
 EnvironmentFile=/home/sashok/.openclaw/workspace/insilver-v3/.env
 ExecStart=/home/sashok/.openclaw/workspace/insilver-v3/venv/bin/python3 main.py
-Restart=on-failure
-RestartSec=5
+ExecStop=/bin/kill -TERM $MAINPID
+TimeoutStopSec=30
+KillMode=process
+
+# Auto-restart configuration
+Restart=always
+RestartSec=10
+StartLimitAction=reboot
+
+# Security and resource limits
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/home/sashok/.openclaw/workspace/insilver-v3
+MemoryLimit=512M
+TasksMax=100
+
+# Health monitoring
+WatchdogSec=60
 
 [Install]
 WantedBy=multi-user.target
