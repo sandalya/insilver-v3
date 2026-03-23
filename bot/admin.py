@@ -77,7 +77,7 @@ async def admin_panel(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     # Основні кнопки
     keyboard_buttons.extend([
         [InlineKeyboardButton("🎓 Тренер мод", callback_data="admin_trainer")],
-        [InlineKeyboardButton("📋 Переглянути знання", callback_data="admin_view")],
+        [InlineKeyboardButton("📋 База знань", callback_data="admin_view")],
     ])
     
     # Кнопка непідтверджених записів (якщо є)
@@ -417,7 +417,7 @@ async def finish_trainer_session(update: Update, ctx: ContextTypes.DEFAULT_TYPE)
     log.info(f"Тренер сесія завершена для {user_id}")
 
 async def view_knowledge(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    """Переглянути існуючі знання."""
+    """Меню перегляду знань."""
     query = update.callback_query
     await query.answer()
     
@@ -426,17 +426,89 @@ async def view_knowledge(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         return
     
     training_data = load_training_data()
+    confirmed_count = len([r for r in training_data if r.get("status", "confirmed") != "unconfirmed"])
     
-    if not training_data:
-        text = "📋 База знань порожня.\n\nПочніть з тренер режиму."
+    text = f"📋 *База знань ({confirmed_count} підтверджених записів)*\n\nОберіть дію:"
+    
+    keyboard_buttons = [
+        [InlineKeyboardButton("📄 Всі записи списком", callback_data="admin_view_all")],
+        [InlineKeyboardButton("✏️ Редагувати записи", callback_data="admin_edit_records")],
+        [InlineKeyboardButton("🔙 Назад", callback_data="admin_main")]
+    ]
+    
+    keyboard = InlineKeyboardMarkup(keyboard_buttons)
+    await query.edit_message_text(text, parse_mode=None, reply_markup=keyboard)
+
+async def view_all_knowledge(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    """Показати всі записи списком з номерами."""
+    query = update.callback_query
+    await query.answer()
+    
+    user_id = update.effective_user.id
+    if not is_admin(user_id):
+        return
+    
+    training_data = load_training_data()
+    confirmed_records = [r for r in training_data if r.get("status", "confirmed") != "unconfirmed"]
+    
+    if not confirmed_records:
+        text = "📋 Підтверджених записів немає.\n\nПочніть з тренер режиму або підтвердіть непідтверджені записи."
         keyboard = InlineKeyboardMarkup([[
-            InlineKeyboardButton("🔙 Назад", callback_data="admin_main")
+            InlineKeyboardButton("🔙 Назад", callback_data="admin_view")
         ]])
     else:
-        text = f"📋 *База знань ({len(training_data)} записів)*\n\n"
+        text = f"📄 ВСІ ЗАПИСИ БАЗИ ЗНАНЬ ({len(confirmed_records)})\n\n"
+        
+        for i, record in enumerate(confirmed_records, 1):
+            record_id = record.get("id", "?")
+            title = record.get("title", f"Запис {record_id}")
+            created = record.get("created", "")[:10] if record.get("created") else "?"
+            
+            # Отримуємо повний контент
+            content = record.get("content", [])
+            if content and isinstance(content, list) and content[0]:
+                full_text = content[0].get("text", "").strip()
+            else:
+                full_text = "Порожній запис"
+            
+            # Медіа інфо
+            media_count = len(record.get("media", []))
+            media_info = f" 📎{media_count}" if media_count > 0 else ""
+            
+            # Форматуємо запис
+            text += f"{i}. | {created}{media_info} (ID: {record_id})\n"
+            text += f"{full_text}\n"
+            text += f"──────────────────────\n\n"
+        
+        keyboard = InlineKeyboardMarkup([
+            [InlineKeyboardButton("✏️ Редагувати записи", callback_data="admin_edit_records")],
+            [InlineKeyboardButton("🔙 Назад", callback_data="admin_view")]
+        ])
+    
+    await query.edit_message_text(text, parse_mode=None, reply_markup=keyboard)
+
+async def edit_records_menu(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    """Переглянути записи для редагування."""
+    query = update.callback_query
+    await query.answer()
+    
+    user_id = update.effective_user.id
+    if not is_admin(user_id):
+        return
+    
+    training_data = load_training_data()
+    confirmed_records = [r for r in training_data if r.get("status", "confirmed") != "unconfirmed"]
+    
+    if not confirmed_records:
+        text = "📋 Підтверджених записів для редагування немає."
+        keyboard = InlineKeyboardMarkup([[
+            InlineKeyboardButton("🔙 Назад", callback_data="admin_view")
+        ]])
+    else:
+        text = f"✏️ *Редагувати записи ({len(confirmed_records)})*\n\n"
         keyboard_buttons = []
         
-        for record in training_data[-10:]:  # Останні 10
+        for record in confirmed_records[-10:]:  # Останні 10
             title = record.get("title", f"Запис {record.get('id', '?')}")
             created = record.get("created", "")[:10]  # YYYY-MM-DD
             button_text = f"{title[:25]}... ({created})"
@@ -446,14 +518,14 @@ async def view_knowledge(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
             ])
         
         keyboard_buttons.append([
-            InlineKeyboardButton("🔙 Назад", callback_data="admin_main")
+            InlineKeyboardButton("🔙 Назад", callback_data="admin_view")
         ])
         keyboard = InlineKeyboardMarkup(keyboard_buttons)
         
-        if len(training_data) > 10:
+        if len(confirmed_records) > 10:
             text += "_Показані останні 10 записів_\n\n"
         
-        text += "Оберіть запис для перегляду:"
+        text += "Оберіть запис для редагування:"
     
     await query.edit_message_text(text, parse_mode=None, reply_markup=keyboard)
 
@@ -1814,6 +1886,10 @@ async def handle_admin_callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         await show_trainer_status(update, ctx)
     elif data == "admin_view":
         await view_knowledge(update, ctx)
+    elif data == "admin_view_all":
+        await view_all_knowledge(update, ctx)
+    elif data == "admin_edit_records":
+        await edit_records_menu(update, ctx)
     elif data == "admin_stats":
         await show_conversation_stats(update, ctx)
     elif data == "admin_recover":
