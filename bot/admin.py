@@ -19,6 +19,14 @@ from core.log_analyzer import (
 
 log = logging.getLogger("bot.admin")
 
+def safe_send_text(text: str, keyboard = None):
+    """Безпечно відправити текст без Markdown проблем."""
+    # Повністю прибираємо всі Markdown символи
+    safe_text = text.replace("*", "").replace("_", "").replace("[", "").replace("]", "").replace("`", "")
+    # Замінюємо подвійні пробіли на одинарні
+    safe_text = " ".join(safe_text.split())
+    return safe_text, keyboard
+
 # Файл з навчальними записами
 TRAINING_FILE = Path(DATA_DIR) / "knowledge" / "training.json"
 TRAINING_MEDIA_DIR = Path(DATA_DIR) / "knowledge" / "media"
@@ -72,15 +80,13 @@ async def admin_panel(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("📋 Переглянути знання", callback_data="admin_view")],
     ])
     
-    # Кнопка неподтверджених записів (якщо є)
+    # Кнопка непідтверджених записів (якщо є)
     if unconfirmed_count > 0:
         keyboard_buttons.append([
             InlineKeyboardButton(f"⚠️ Непідтверджені ({unconfirmed_count})", callback_data="admin_unconfirmed")
         ])
     
     keyboard_buttons.extend([
-        [InlineKeyboardButton("💾 Відновити дані", callback_data="admin_recover")],
-        [InlineKeyboardButton("🔍 Сканувати втрачені", callback_data="admin_scan_lost")],
         [InlineKeyboardButton("📊 Статистика", callback_data="admin_stats")],
         [InlineKeyboardButton("❌ Закрити", callback_data="admin_close")]
     ])
@@ -94,9 +100,9 @@ async def admin_panel(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     text = f"🔧 *Адмін панель InSilver v3*\n\n{status_text}\n\nОберіть дію:"
     
     if update.callback_query:
-        await update.callback_query.edit_message_text(text, parse_mode="Markdown", reply_markup=keyboard)
+        await update.callback_query.edit_message_text(text, parse_mode=None, reply_markup=keyboard)
     else:
-        await update.message.reply_text(text, parse_mode="Markdown", reply_markup=keyboard)
+        await update.message.reply_text(text, parse_mode=None, reply_markup=keyboard)
 
 async def start_trainer_mode(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     """Активувати тренер режим."""
@@ -147,7 +153,7 @@ async def start_trainer_mode(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         f"{collection_info}"
     )
     
-    await query.edit_message_text(text, parse_mode="Markdown", reply_markup=keyboard)
+    await query.edit_message_text(text, parse_mode=None, reply_markup=keyboard)
     log.info(f"Тренер режим активовано для {user_id}")
 
 async def show_trainer_status(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
@@ -188,7 +194,7 @@ async def show_trainer_status(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     
     keyboard = InlineKeyboardMarkup(keyboard_buttons)
     
-    await query.edit_message_text(text, parse_mode="Markdown", reply_markup=keyboard)
+    await query.edit_message_text(text, parse_mode=None, reply_markup=keyboard)
 
 async def handle_trainer_input(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     """Обробка повідомлень в тренер режимі."""
@@ -279,7 +285,7 @@ async def handle_trainer_input(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     
     await message.reply_text(
         preview, 
-        parse_mode="Markdown",
+        parse_mode=None,
         reply_markup=keyboard,
         reply_to_message_id=message.message_id
     )
@@ -314,7 +320,7 @@ async def finish_trainer_session(update: Update, ctx: ContextTypes.DEFAULT_TYPE)
             [InlineKeyboardButton("❌ Скасувати збірку", callback_data="trainer_cancel_collection")],
             [InlineKeyboardButton("🔙 Продовжити тренування", callback_data="admin_trainer")]
         ])
-        await query.edit_message_text(text, parse_mode="Markdown", reply_markup=keyboard)
+        await query.edit_message_text(text, parse_mode=None, reply_markup=keyboard)
         return
     
     if not confirmed_records:
@@ -407,7 +413,7 @@ async def finish_trainer_session(update: Update, ctx: ContextTypes.DEFAULT_TYPE)
         InlineKeyboardButton("🔙 Назад", callback_data="admin_main")
     ]])
     
-    await query.edit_message_text(text, parse_mode="Markdown", reply_markup=keyboard)
+    await query.edit_message_text(text, parse_mode=None, reply_markup=keyboard)
     log.info(f"Тренер сесія завершена для {user_id}")
 
 async def view_knowledge(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
@@ -449,7 +455,7 @@ async def view_knowledge(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         
         text += "Оберіть запис для перегляду:"
     
-    await query.edit_message_text(text, parse_mode="Markdown", reply_markup=keyboard)
+    await query.edit_message_text(text, parse_mode=None, reply_markup=keyboard)
 
 async def show_knowledge_detail(update: Update, ctx: ContextTypes.DEFAULT_TYPE, record_id: int):
     """Показати детальний перегляд навчального запису."""
@@ -509,7 +515,7 @@ async def show_knowledge_detail(update: Update, ctx: ContextTypes.DEFAULT_TYPE, 
         [InlineKeyboardButton("📋 До списку", callback_data="admin_view")]
     ])
     
-    await query.edit_message_text(text, parse_mode="Markdown", reply_markup=keyboard)
+    await query.edit_message_text(text, parse_mode=None, reply_markup=keyboard)
 
 async def delete_knowledge_record(update: Update, ctx: ContextTypes.DEFAULT_TYPE, record_id: int):
     """Видалити навчальний запис."""
@@ -542,7 +548,7 @@ async def delete_knowledge_record(update: Update, ctx: ContextTypes.DEFAULT_TYPE
         [InlineKeyboardButton("❌ Скасувати", callback_data=f"knowledge_view_{record_id}")]
     ])
     
-    await query.edit_message_text(text, parse_mode="Markdown", reply_markup=keyboard)
+    await query.edit_message_text(text, parse_mode=None, reply_markup=keyboard)
 
 async def confirm_delete_knowledge(update: Update, ctx: ContextTypes.DEFAULT_TYPE, record_id: int):
     """Підтвердити видалення навчального запису."""
@@ -592,7 +598,7 @@ async def confirm_delete_knowledge(update: Update, ctx: ContextTypes.DEFAULT_TYP
             [InlineKeyboardButton("📋 До списку знань", callback_data="admin_view")]
         ])
         
-        await query.edit_message_text(text, parse_mode="Markdown", reply_markup=keyboard)
+        await query.edit_message_text(text, parse_mode=None, reply_markup=keyboard)
         log.info(f"Видалено навчальний запис {record_id} адміном {user_id}")
         
     except Exception as e:
@@ -643,10 +649,15 @@ async def start_knowledge_edit(update: Update, ctx: ContextTypes.DEFAULT_TYPE, r
         [InlineKeyboardButton("❌ Скасувати", callback_data=f"knowledge_view_{record_id}")]
     ])
     
-    await query.edit_message_text(text, parse_mode="Markdown", reply_markup=keyboard)
+    await query.edit_message_text(text, parse_mode=None, reply_markup=keyboard)
 
 async def handle_edit_input(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     """Обробити новий текст для редагування."""
+    # Спочатку перевіряємо редагування непідтверджених записів
+    if await handle_unconfirmed_edit_input(update, ctx):
+        return True
+    
+    # Потім звичайне редагування
     edit_mode = ctx.user_data.get("edit_mode")
     if not edit_mode:
         return False  # Не в режимі редагування
@@ -679,7 +690,7 @@ async def handle_edit_input(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     # Зберегти новий текст в сесію
     ctx.user_data["edit_mode"]["new_text"] = new_text
     
-    await update.message.reply_text(text, parse_mode="Markdown", reply_markup=keyboard)
+    await update.message.reply_text(text, parse_mode=None, reply_markup=keyboard)
     return True
 
 async def save_knowledge_edit(update: Update, ctx: ContextTypes.DEFAULT_TYPE, record_id: int):
@@ -737,7 +748,7 @@ async def save_knowledge_edit(update: Update, ctx: ContextTypes.DEFAULT_TYPE, re
             [InlineKeyboardButton("📋 До списку", callback_data="admin_view")]
         ])
         
-        await query.edit_message_text(text, parse_mode="Markdown", reply_markup=keyboard)
+        await query.edit_message_text(text, parse_mode=None, reply_markup=keyboard)
         log.info(f"Відредаговано навчальний запис {record_id} адміном {user_id}")
         
         # Очистити режим редагування
@@ -791,10 +802,10 @@ async def show_conversation_stats(update: Update, ctx: ContextTypes.DEFAULT_TYPE
             [InlineKeyboardButton("🔙 Назад", callback_data="admin_main")]
         ])
     
-    await query.edit_message_text(text, parse_mode="Markdown", reply_markup=keyboard)
+    await query.edit_message_text(text, parse_mode=None, reply_markup=keyboard)
 
 async def show_recovery_menu(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    """Показати меню відновлення даних."""
+    """Показати об'єднане меню відновлення даних (бекапи + сканування логів)."""
     query = update.callback_query
     await query.answer()
     
@@ -808,20 +819,36 @@ async def show_recovery_menu(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         
         text = (
             f"💾 *Відновлення даних*\n\n"
-            f"Знайдено бекапів: {len(backups)}\n"
-            f"Ваших бекапів: {len(user_backups)}\n\n"
-            f"Оберіть дію:"
+            f"📦 Бекапів знайдено: {len(backups)}\n"
+            f"👤 Ваших бекапів: {len(user_backups)}\n\n"
+            f"🔍 Також можу просканувати логи для втрачених записів\n\n"
+            f"Оберіть джерело відновлення:"
         )
         
         keyboard_buttons = []
+        
+        # Бекапи
         if user_backups:
             keyboard_buttons.append([
                 InlineKeyboardButton("📋 Мої бекапи", callback_data="recovery_my_backups")
             ])
+        if len(backups) > len(user_backups):
+            keyboard_buttons.append([
+                InlineKeyboardButton("🔍 Всі бекапи", callback_data="recovery_all_backups")
+            ])
         
-        keyboard_buttons.extend([
-            [InlineKeyboardButton("🔍 Всі бекапи", callback_data="recovery_all_backups")],
-            [InlineKeyboardButton("🔙 Назад", callback_data="admin_main")]
+        # Сканування логів
+        keyboard_buttons.append([
+            InlineKeyboardButton("🔍 Сканувати логи", callback_data="recovery_scan_logs")
+        ])
+        
+        # Комбо-дія
+        keyboard_buttons.append([
+            InlineKeyboardButton("⚡ Відновити все", callback_data="recovery_full_scan")
+        ])
+        
+        keyboard_buttons.append([
+            InlineKeyboardButton("🔙 Назад", callback_data="admin_main")
         ])
         
         keyboard = InlineKeyboardMarkup(keyboard_buttons)
@@ -832,7 +859,7 @@ async def show_recovery_menu(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
             InlineKeyboardButton("🔙 Назад", callback_data="admin_main")
         ]])
     
-    await query.edit_message_text(text, parse_mode="Markdown", reply_markup=keyboard)
+    await query.edit_message_text(text, parse_mode=None, reply_markup=keyboard)
 
 async def show_backup_list(update: Update, ctx: ContextTypes.DEFAULT_TYPE, show_all: bool = False):
     """Показати список бекапів."""
@@ -881,7 +908,7 @@ async def show_backup_list(update: Update, ctx: ContextTypes.DEFAULT_TYPE, show_
             InlineKeyboardButton("🔙 Назад", callback_data="admin_recover")
         ]])
     
-    await query.edit_message_text(text, parse_mode="Markdown", reply_markup=keyboard)
+    await query.edit_message_text(text, parse_mode=None, reply_markup=keyboard)
 
 async def show_backup_details(update: Update, ctx: ContextTypes.DEFAULT_TYPE, filename: str):
     """Показати детальну інформацію про бекап."""
@@ -940,7 +967,7 @@ async def show_backup_details(update: Update, ctx: ContextTypes.DEFAULT_TYPE, fi
             InlineKeyboardButton("📋 До списку", callback_data="recovery_my_backups")
         ]])
     
-    await query.edit_message_text(text, parse_mode="Markdown", reply_markup=keyboard)
+    await query.edit_message_text(text, parse_mode=None, reply_markup=keyboard)
 
 async def restore_backup(update: Update, ctx: ContextTypes.DEFAULT_TYPE, filename: str):
     """Відновити дані з бекапу."""
@@ -1021,7 +1048,7 @@ async def restore_backup(update: Update, ctx: ContextTypes.DEFAULT_TYPE, filenam
             InlineKeyboardButton("📋 До списку", callback_data="recovery_my_backups")
         ]])
     
-    await query.edit_message_text(text, parse_mode="Markdown", reply_markup=keyboard)
+    await query.edit_message_text(text, parse_mode=None, reply_markup=keyboard)
 
 async def scan_for_lost_data(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     """Сканувати логи для пошуку втрачених записів."""
@@ -1039,9 +1066,9 @@ async def scan_for_lost_data(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         recovered_records = await auto_recover_lost_data(user_id, ask_ai)
         
         if not recovered_records:
-            text = "🔍 *Сканування завершено*\n\nВтрачених записів не знайдено."
+            text = "🔍 *Сканування логів завершено*\n\nВтрачених записів не знайдено."
             keyboard = InlineKeyboardMarkup([[
-                InlineKeyboardButton("🔙 Назад", callback_data="admin_main")
+                InlineKeyboardButton("🔙 До відновлення", callback_data="admin_recover")
             ]])
         else:
             # Додаємо відновлені записи до бази
@@ -1050,7 +1077,7 @@ async def scan_for_lost_data(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
             
             if save_training_data(training_data):
                 text = (
-                    f"✅ *Сканування завершено*\n\n"
+                    f"✅ *Сканування логів завершено*\n\n"
                     f"Знайдено і відновлено: {len(recovered_records)} записів\n"
                     f"Статус: непідтверджені\n\n"
                     f"Перегляньте і підтвердіть їх у розділі 'Непідтверджені'"
@@ -1061,17 +1088,96 @@ async def scan_for_lost_data(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
             
             keyboard = InlineKeyboardMarkup([
                 [InlineKeyboardButton("⚠️ Переглянути непідтверджені", callback_data="admin_unconfirmed")],
-                [InlineKeyboardButton("🔙 Назад", callback_data="admin_main")]
+                [InlineKeyboardButton("💾 До відновлення", callback_data="admin_recover")]
             ])
         
     except Exception as e:
         log.error(f"Помилка сканування втрачених даних: {e}")
         text = f"❌ Помилка сканування: {e}"
         keyboard = InlineKeyboardMarkup([[
-            InlineKeyboardButton("🔙 Назад", callback_data="admin_main")
+            InlineKeyboardButton("💾 До відновлення", callback_data="admin_recover")
         ]])
     
-    await query.edit_message_text(text, parse_mode="Markdown", reply_markup=keyboard)
+    await query.edit_message_text(text, parse_mode=None, reply_markup=keyboard)
+
+async def full_recovery_scan(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    """Повне відновлення: бекапи + сканування логів."""
+    query = update.callback_query
+    await query.answer("⚡ Повне сканування...")
+    
+    user_id = update.effective_user.id
+    if not is_admin(user_id):
+        return
+    
+    results = {
+        "backups_found": 0,
+        "logs_recovered": 0,
+        "total_restored": 0,
+        "errors": []
+    }
+    
+    try:
+        # 1. Спочатку показуємо що є в бекапах
+        backups = list_backup_files()
+        user_backups = [b for b in backups if b.get("user_id") == user_id]
+        results["backups_found"] = len(user_backups)
+        
+        # 2. Сканування логів
+        from core.ai import ask_ai
+        recovered_records = await auto_recover_lost_data(user_id, ask_ai)
+        results["logs_recovered"] = len(recovered_records)
+        
+        if recovered_records:
+            # Додаємо відновлені записи до бази
+            training_data = load_training_data()
+            training_data.extend(recovered_records)
+            
+            if save_training_data(training_data):
+                results["total_restored"] = len(recovered_records)
+                log.info(f"Повне відновлення: {len(recovered_records)} записів для {user_id}")
+            else:
+                results["errors"].append("Помилка збереження записів з логів")
+        
+        # Формуємо результат
+        text = (
+            f"⚡ *Повне сканування завершено*\n\n"
+            f"📦 Бекапів знайдено: {results['backups_found']}\n"
+            f"🔍 З логів відновлено: {results['logs_recovered']}\n"
+            f"💾 Всього записів відновлено: {results['total_restored']}\n"
+        )
+        
+        if results["errors"]:
+            text += f"\n⚠️ Помилки:\n" + "\n".join(results["errors"])
+        
+        if results["logs_recovered"] > 0:
+            text += f"\n\n📝 Записи з логів мають статус 'непідтверджені'"
+        
+        keyboard_buttons = []
+        
+        if results["backups_found"] > 0:
+            keyboard_buttons.append([
+                InlineKeyboardButton("📦 Переглянути бекапи", callback_data="recovery_my_backups")
+            ])
+        
+        if results["logs_recovered"] > 0:
+            keyboard_buttons.append([
+                InlineKeyboardButton("⚠️ Переглянути непідтверджені", callback_data="admin_unconfirmed")
+            ])
+        
+        keyboard_buttons.append([
+            InlineKeyboardButton("💾 До відновлення", callback_data="admin_recover")
+        ])
+        
+        keyboard = InlineKeyboardMarkup(keyboard_buttons)
+        
+    except Exception as e:
+        log.error(f"Помилка повного сканування: {e}")
+        text = f"❌ Помилка повного сканування: {e}"
+        keyboard = InlineKeyboardMarkup([[
+            InlineKeyboardButton("💾 До відновлення", callback_data="admin_recover")
+        ]])
+    
+    await query.edit_message_text(text, parse_mode=None, reply_markup=keyboard)
 
 async def show_unconfirmed_records(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     """Показати непідтверджені записи."""
@@ -1120,10 +1226,142 @@ async def show_unconfirmed_records(update: Update, ctx: ContextTypes.DEFAULT_TYP
             InlineKeyboardButton("🔙 Назад", callback_data="admin_main")
         ]])
     
-    await query.edit_message_text(text, parse_mode="Markdown", reply_markup=keyboard)
+    await query.edit_message_text(text, parse_mode=None, reply_markup=keyboard)
 
 async def show_unconfirmed_detail(update: Update, ctx: ContextTypes.DEFAULT_TYPE, record_id: int):
-    """Показати детальний перегляд неподтвердженого запису."""
+    """Показати детальний перегляд непідтвердженого запису."""
+    query = update.callback_query
+    await query.answer()
+    
+    user_id = update.effective_user.id
+    if not is_admin(user_id):
+        return
+    
+    try:
+        unconfirmed_records = get_unconfirmed_records()
+        record = next((r for r in unconfirmed_records if abs(r.get("id", 0)) == record_id), None)
+        
+        # Простий лічильник - скільки залишилось
+        remaining_count = len(unconfirmed_records)
+        progress_info = f"Залишилось: {remaining_count}"
+        
+        if not record:
+            await query.edit_message_text("❌ Запис не знайдено")
+            return
+        
+        title = record.get("title", f"Запис {record.get('id', '?')}")
+        # Екрануємо заголовок
+        title_safe = title.replace("*", "\\*").replace("_", "\\_").replace("[", "\\[").replace("]", "\\]").replace("`", "\\`")
+        created = record.get("created", "")[:16]
+        
+        # Визначаємо джерело запису
+        migration_source = record.get("migration_source")
+        original_analysis_time = record.get("original_analysis_time", "")
+        
+        # AI розширений контент
+        content = record.get("content", [])
+        if content:
+            content_text = content[0].get("text", "")
+            if len(content_text) > 600:
+                content_text = content_text[:600] + "..."
+            # Екрануємо Markdown символи
+            content_text = content_text.replace("*", "\\*").replace("_", "\\_").replace("[", "\\[").replace("]", "\\]").replace("`", "\\`")
+        else:
+            content_text = "Порожньо"
+        
+        # Прогрес - скільки залишилось
+        progress_text = f"(Залишилось: {remaining_count})"
+        
+        # Формуємо текст залежно від джерела
+        if migration_source == "insilver-v2":
+            # Міграція з v2
+            original_id = record.get("original_id", "")
+            source_info = f"🔄 Джерело: міграція з InSilver v2 (ID: {original_id})"
+            
+            text = (
+                f"⚠️ *{title_safe}* {progress_text}\n\n"
+                f"📅 Створено: {created}\n"
+                f"{source_info}\n\n"
+                f"**Зміст:**\n{content_text}\n\n"
+                f"**Підтвердити цей запис?**"
+            )
+            
+        elif original_analysis_time:
+            # Автоматично відновлений з логів
+            recovery_time = original_analysis_time[:16]
+            
+            # Оригінальні фрагменти
+            original_fragments = record.get("original_fragments", [])
+            fragments_preview = ""
+            if original_fragments:
+                fragments_preview = "\n\n**Оригінальні фрагменти з логів:**\n"
+                for i, fragment in enumerate(original_fragments[:3], 1):
+                    fragments_preview += f"{i}. {fragment.get('message', '')[:80]}...\n"
+            
+            text = (
+                f"⚠️ *{title_safe}* {progress_text}\n\n"
+                f"📅 Відновлено: {created}\n"
+                f"🕐 Втрачено: {recovery_time}\n"
+                f"🤖 Джерело: автоматичний аналіз логів\n\n"
+                f"**AI розширений зміст:**\n{content_text}"
+                f"{fragments_preview}\n\n"
+                f"**Підтвердити цей запис?**"
+            )
+        else:
+            # Звичайний запис
+            text = (
+                f"⚠️ *{title_safe}* {progress_text}\n\n"
+                f"📅 Створено: {created}\n\n"
+                f"**Зміст:**\n{content_text}\n\n"
+                f"**Підтвердити цей запис?**"
+            )
+        
+        keyboard = InlineKeyboardMarkup([
+            [InlineKeyboardButton("✅ Підтвердити", callback_data=f"unconfirmed_confirm_{record_id}")],
+            [InlineKeyboardButton("✏️ Редагувати", callback_data=f"unconfirmed_edit_{record_id}")],
+            [InlineKeyboardButton("❌ Відхилити", callback_data=f"unconfirmed_reject_{record_id}")],
+            [InlineKeyboardButton("📋 До списку", callback_data="admin_unconfirmed")]
+        ])
+        
+    except Exception as e:
+        text = f"❌ Помилка завантаження запису: {e}"
+        keyboard = InlineKeyboardMarkup([[
+            InlineKeyboardButton("📋 До списку", callback_data="admin_unconfirmed")
+        ]])
+    
+    await query.edit_message_text(text, parse_mode=None, reply_markup=keyboard)
+
+async def find_next_unconfirmed_record(current_record_id: int):
+    """Знайти наступний непідтверджений запис після поточного."""
+    try:
+        unconfirmed_records = get_unconfirmed_records()
+        
+        if not unconfirmed_records:
+            return None
+            
+        # Сортуємо по абсолютному значенню ID
+        sorted_records = sorted(unconfirmed_records, key=lambda r: abs(r.get("id", 0)))
+        all_ids = [abs(r.get("id", 0)) for r in sorted_records]
+        
+        log.info(f"Пошук наступного після {current_record_id}. Непідтверджені ID: {all_ids}")
+        
+        # Шукаємо найменший ID більший за поточний
+        next_id = None
+        for record in sorted_records:
+            record_id = abs(record.get("id", 0))
+            if record_id > current_record_id:
+                next_id = record_id
+                break
+        
+        log.info(f"Наступний ID після {current_record_id}: {next_id}")
+        return next_id
+        
+    except Exception as e:
+        log.error(f"Помилка пошуку наступного запису: {e}")
+        return None
+
+async def start_unconfirmed_edit(update: Update, ctx: ContextTypes.DEFAULT_TYPE, record_id: int):
+    """Почати редагування непідтвердженого запису."""
     query = update.callback_query
     await query.answer()
     
@@ -1139,53 +1377,156 @@ async def show_unconfirmed_detail(update: Update, ctx: ContextTypes.DEFAULT_TYPE
             await query.edit_message_text("❌ Запис не знайдено")
             return
         
-        title = record.get("title", f"Запис {record.get('id', '?')}")
-        created = record.get("created", "")[:16]
-        recovery_time = record.get("original_analysis_time", "")[:16] if record.get("original_analysis_time") else ""
+        title = record.get("title", f"Запис {record_id}")
+        # Екрануємо заголовок
+        title_safe = title.replace("*", "\\*").replace("_", "\\_").replace("[", "\\[").replace("]", "\\]").replace("`", "\\`")
         
-        # AI розширений контент
+        # Поточний контент
         content = record.get("content", [])
         if content:
-            ai_content = content[0].get("text", "")
-            if len(ai_content) > 600:
-                ai_content = ai_content[:600] + "..."
+            current_text = content[0].get("text", "")
+            # Екрануємо контент для preview
+            current_text_safe = current_text.replace("*", "\\*").replace("_", "\\_").replace("[", "\\[").replace("]", "\\]").replace("`", "\\`")
         else:
-            ai_content = "Порожньо"
+            current_text = ""
+            current_text_safe = ""
         
-        # Оригінальні фрагменти
-        original_fragments = record.get("original_fragments", [])
-        fragments_preview = ""
-        if original_fragments:
-            fragments_preview = "\n\n**Оригінальні фрагменти з логів:**\n"
-            for i, fragment in enumerate(original_fragments[:3], 1):
-                fragments_preview += f"{i}. {fragment.get('message', '')[:80]}...\n"
+        # Встановити режим редагування
+        ctx.user_data["edit_unconfirmed_mode"] = {
+            "record_id": record_id,
+            "original_text": current_text,
+            "title": title
+        }
+        
+        preview = current_text[:500] + "..." if len(current_text) > 500 else current_text
+        
+        # Лічильник
+        remaining_count = len(unconfirmed_records)
         
         text = (
-            f"⚠️ *{title}*\n\n"
-            f"📅 Відновлено: {created}\n"
-            f"🕐 Втрачено: {recovery_time}\n"
-            f"🤖 Джерело: автоматичний аналіз логів\n\n"
-            f"**AI розширений зміст:**\n{ai_content}"
-            f"{fragments_preview}\n\n"
-            f"**Підтвердити цей запис?**"
+            f"✏️ *Редагування: {title}*\n"
+            f"(Залишилось: {remaining_count})\n\n"
+            f"**Поточний текст:**\n{preview}\n\n"
+            f"📝 Надішліть новий текст або натисніть скасувати:"
         )
         
         keyboard = InlineKeyboardMarkup([
-            [InlineKeyboardButton("✅ Підтвердити", callback_data=f"unconfirmed_confirm_{record_id}")],
-            [InlineKeyboardButton("❌ Відхилити", callback_data=f"unconfirmed_reject_{record_id}")],
-            [InlineKeyboardButton("📋 До списку", callback_data="admin_unconfirmed")]
+            [InlineKeyboardButton("❌ Скасувати", callback_data=f"unconfirmed_view_{record_id}")]
         ])
         
+        await query.edit_message_text(text, parse_mode=None, reply_markup=keyboard)
+        
     except Exception as e:
-        text = f"❌ Помилка завантаження запису: {e}"
-        keyboard = InlineKeyboardMarkup([[
-            InlineKeyboardButton("📋 До списку", callback_data="admin_unconfirmed")
-        ]])
+        log.error(f"Помилка початку редагування непідтвердженого запису {record_id}: {e}")
+        await query.edit_message_text("❌ Помилка відкриття редагування")
+
+async def handle_unconfirmed_edit_input(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    """Обробити новий текст для редагування непідтвердженого запису."""
+    edit_mode = ctx.user_data.get("edit_unconfirmed_mode")
+    if not edit_mode:
+        return False  # Не в режимі редагування
     
-    await query.edit_message_text(text, parse_mode="Markdown", reply_markup=keyboard)
+    user_id = update.effective_user.id
+    if not is_admin(user_id):
+        return False
+    
+    new_text = update.message.text
+    if not new_text:
+        return True  # Блокуємо, але не обробляємо порожній текст
+    
+    record_id = edit_mode["record_id"]
+    title = edit_mode["title"]
+    
+    # Показати попередження перед збереженням
+    preview = new_text[:300] + "..." if len(new_text) > 300 else new_text
+    
+    text = (
+        f"✏️ *Підтвердити зміни: {title}*\n\n"
+        f"**Новий текст:**\n{preview}\n\n"
+        f"💾 Зберегти зміни?"
+    )
+    
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton("✅ Зберегти", callback_data=f"unconfirmed_save_edit_{record_id}")],
+        [InlineKeyboardButton("❌ Скасувати", callback_data=f"unconfirmed_view_{record_id}")]
+    ])
+    
+    # Зберегти новий текст в сесію
+    ctx.user_data["edit_unconfirmed_mode"]["new_text"] = new_text
+    
+    await update.message.reply_text(text, parse_mode=None, reply_markup=keyboard)
+    return True
+
+async def save_unconfirmed_edit(update: Update, ctx: ContextTypes.DEFAULT_TYPE, record_id: int):
+    """Зберегти зміни в непідтвердженому записі і перейти до наступного."""
+    query = update.callback_query
+    await query.answer("💾 Зберігаю...")
+    
+    user_id = update.effective_user.id
+    if not is_admin(user_id):
+        return
+    
+    edit_mode = ctx.user_data.get("edit_unconfirmed_mode")
+    if not edit_mode or edit_mode.get("record_id") != record_id:
+        await query.edit_message_text("❌ Помилка: дані редагування не знайдено")
+        return
+    
+    new_text = edit_mode.get("new_text")
+    if not new_text:
+        await query.edit_message_text("❌ Помилка: новий текст не знайдено")
+        return
+    
+    try:
+        # Завантажуємо дані
+        training_data = load_training_data()
+        
+        # Знаходимо запис
+        for record in training_data:
+            if abs(record.get("id", 0)) == record_id and record.get("status") == "unconfirmed":
+                # Оновити контент
+                record["content"] = [{
+                    "text": new_text,
+                    "timestamp": datetime.now().isoformat()
+                }]
+                
+                # Додати інформацію про редагування
+                record["edited"] = datetime.now().isoformat()
+                record["edited_by"] = user_id
+                break
+        else:
+            await query.edit_message_text("❌ Запис не знайдено")
+            return
+        
+        # Зберегти оновлений список
+        if save_training_data(training_data):
+            log.info(f"Відредаговано непідтверджений запис {record_id} адміном {user_id}")
+            
+            # Очистити режим редагування
+            ctx.user_data.pop("edit_unconfirmed_mode", None)
+            
+            # Знайти наступний запис
+            next_record_id = await find_next_unconfirmed_record(record_id)
+            
+            if next_record_id:
+                # Автоматично показати наступний запис
+                await show_unconfirmed_detail(update, ctx, next_record_id)
+            else:
+                # Це був останній
+                text = "✅ *Запис відредаговано*\n\n🎉 Це був останній непідтверджений запис!"
+                keyboard = InlineKeyboardMarkup([
+                    [InlineKeyboardButton("📋 Переглянути знання", callback_data="admin_view")],
+                    [InlineKeyboardButton("🔧 Головна", callback_data="admin_main")]
+                ])
+                await query.edit_message_text(text, parse_mode=None, reply_markup=keyboard)
+        else:
+            await query.edit_message_text("❌ Помилка збереження змін")
+        
+    except Exception as e:
+        log.error(f"Помилка редагування непідтвердженого запису {record_id}: {e}")
+        await query.edit_message_text("❌ Помилка збереження змін")
 
 async def handle_unconfirmed_action(update: Update, ctx: ContextTypes.DEFAULT_TYPE, action: str, record_id: int):
-    """Обробити дію з неподтвердженим записом."""
+    """Обробити дію з непідтвердженим записом."""
     query = update.callback_query
     
     user_id = update.effective_user.id
@@ -1196,28 +1537,51 @@ async def handle_unconfirmed_action(update: Update, ctx: ContextTypes.DEFAULT_TY
     try:
         if action == "confirm":
             await query.answer("✅ Підтверджую...")
+            
+            # СПОЧАТКУ шукаємо наступний запис (перед підтвердженням!)
+            next_record_id = await find_next_unconfirmed_record(record_id)
+            
+            # Потім підтверджуємо поточний
             success = confirm_record(-record_id, user_id)  # Негативний ID для пошуку
             
             if success:
-                text = "✅ *Запис підтверджено*\n\nЗапис переміщено до основної бази знань з новим ID."
-                log.info(f"Підтверджено неподтверджений запис {record_id} адміном {user_id}")
+                log.info(f"Підтверджено непідтверджений запис {record_id} адміном {user_id}")
+                
+                if next_record_id:
+                    # Автоматично показуємо наступний запис
+                    await show_unconfirmed_detail(update, ctx, next_record_id)
+                    return
+                else:
+                    text = "✅ *Запис підтверджено*\n\n🎉 Це був останній непідтверджений запис!"
             else:
                 text = "❌ Помилка підтвердження запису"
                 
         elif action == "reject":
             await query.answer("❌ Відхиляю...")
+            
+            # СПОЧАТКУ шукаємо наступний запис (перед відхиленням!)
+            next_record_id = await find_next_unconfirmed_record(record_id)
+            
+            # Потім відхиляємо поточний
             success = reject_record(-record_id, user_id)  # Негативний ID для пошуку
             
             if success:
-                text = "❌ *Запис відхилено*\n\nЗапис видалено з бази даних."
-                log.info(f"Відхилено неподтверджений запис {record_id} адміном {user_id}")
+                log.info(f"Відхилено непідтверджений запис {record_id} адміном {user_id}")
+                
+                if next_record_id:
+                    # Автоматично показуємо наступний запис  
+                    await show_unconfirmed_detail(update, ctx, next_record_id)
+                    return
+                else:
+                    text = "❌ *Запис відхилено*\n\n🎉 Це був останній непідтверджений запис!"
             else:
                 text = "❌ Помилка відхилення запису"
         else:
             text = "❌ Невідома дія"
         
+        # Якщо дійшли сюди - немає наступного запису або помилка
         keyboard = InlineKeyboardMarkup([
-            [InlineKeyboardButton("⚠️ До неподтверджених", callback_data="admin_unconfirmed")],
+            [InlineKeyboardButton("📋 Переглянути знання", callback_data="admin_view")],
             [InlineKeyboardButton("🔧 Головна", callback_data="admin_main")]
         ])
         
@@ -1228,7 +1592,7 @@ async def handle_unconfirmed_action(update: Update, ctx: ContextTypes.DEFAULT_TY
             InlineKeyboardButton("📋 До списку", callback_data="admin_unconfirmed")
         ]])
     
-    await query.edit_message_text(text, parse_mode="Markdown", reply_markup=keyboard)
+    await query.edit_message_text(text, parse_mode=None, reply_markup=keyboard)
 
 async def handle_trainer_collect(update: Update, ctx: ContextTypes.DEFAULT_TYPE, record_id: int):
     """Додати запис до збірки."""
@@ -1263,7 +1627,7 @@ async def handle_trainer_collect(update: Update, ctx: ContextTypes.DEFAULT_TYPE,
     
     await query.edit_message_text(
         f"📥 *Додано до збірки*\n\n📦 В збірці: {collection_size} записів", 
-        parse_mode="Markdown", 
+        parse_mode=None, 
         reply_markup=keyboard
     )
 
@@ -1313,7 +1677,7 @@ async def handle_trainer_finish_collection(update: Update, ctx: ContextTypes.DEF
             [InlineKeyboardButton("❌ Скасувати", callback_data="trainer_cancel_collection")]
         ])
         
-        await query.edit_message_text(text, parse_mode="Markdown", reply_markup=keyboard)
+        await query.edit_message_text(text, parse_mode=None, reply_markup=keyboard)
         
     except Exception as e:
         log.error(f"Помилка AI аналізу збірки: {e}")
@@ -1418,7 +1782,7 @@ async def handle_trainer_save_collection(update: Update, ctx: ContextTypes.DEFAU
         [InlineKeyboardButton("🔙 Назад", callback_data="admin_main")]
     ])
     
-    await query.edit_message_text(text, parse_mode="Markdown", reply_markup=keyboard)
+    await query.edit_message_text(text, parse_mode=None, reply_markup=keyboard)
 
 async def handle_trainer_skip(update: Update, ctx: ContextTypes.DEFAULT_TYPE, record_id: int):
     """Пропустити запис."""
@@ -1433,7 +1797,7 @@ async def handle_trainer_skip(update: Update, ctx: ContextTypes.DEFAULT_TYPE, re
     ctx.user_data["trainer_session"] = session
     
     # Оновити повідомлення
-    await query.edit_message_text("❌ *Пропущено*", parse_mode="Markdown")
+    await query.edit_message_text("❌ *Пропущено*", parse_mode=None)
 
 async def handle_admin_callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     """Обробка callback від адмін панелі."""
@@ -1464,8 +1828,10 @@ async def handle_admin_callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     elif data.startswith("recovery_restore_"):
         filename = data.replace("recovery_restore_", "")
         await restore_backup(update, ctx, filename)
-    elif data == "admin_scan_lost":
+    elif data == "recovery_scan_logs":
         await scan_for_lost_data(update, ctx)
+    elif data == "recovery_full_scan":
+        await full_recovery_scan(update, ctx)
     elif data == "admin_unconfirmed":
         await show_unconfirmed_records(update, ctx)
     elif data.startswith("unconfirmed_view_"):
@@ -1477,6 +1843,12 @@ async def handle_admin_callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     elif data.startswith("unconfirmed_reject_"):
         record_id = int(data.split("_")[2])
         await handle_unconfirmed_action(update, ctx, "reject", record_id)
+    elif data.startswith("unconfirmed_edit_"):
+        record_id = int(data.split("_")[2])
+        await start_unconfirmed_edit(update, ctx, record_id)
+    elif data.startswith("unconfirmed_save_edit_"):
+        record_id = int(data.split("_")[3])
+        await save_unconfirmed_edit(update, ctx, record_id)
     elif data == "admin_close":
         await query.delete_message()
     elif data.startswith("trainer_collect_"):
@@ -1493,7 +1865,7 @@ async def handle_admin_callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         await query.answer("✏️ Напишіть доповнення і натисніть 'Додати до збірки'")
     elif data == "trainer_cancel_collection":
         ctx.user_data.pop("trainer_collection", None)
-        await query.edit_message_text("❌ *Збірку скасовано*", parse_mode="Markdown")
+        await query.edit_message_text("❌ *Збірку скасовано*", parse_mode=None)
     elif data.startswith("knowledge_view_"):
         record_id = int(data.split("_")[2])
         await show_knowledge_detail(update, ctx, record_id)
