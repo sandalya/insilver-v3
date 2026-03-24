@@ -226,6 +226,77 @@ data/knowledge/
 
 ---
 
+## 🔧 СИСТЕМА МОНІТОРИНГУ
+
+### **Health Monitor v3 (AUTO-RESTART + ALERTS)**
+Автоматичний моніторинг стану бота з перезапуском при проблемах.
+
+**Встановлення:**
+```bash
+sudo bash tools/install_monitor.sh
+```
+
+**Що відслідковується:**
+- ✅ **Systemd сервіс** — чи процес активний?
+- ✅ **Telegram API** — чи бот відповідає на `/getMe`?
+- ✅ **Auto-restart** — перезапуск через `systemctl`
+- ✅ **Telegram алерт** — повідомлення при проблемах
+
+**Приклад алерту:**
+```
+🚨 InSilver бот — проблема
+
+⏰ Час: 2026-03-25 03:45:12  
+⚠️ Причина: Telegram API не відповідає
+🔁 Рестартів всього: 2
+🔄 Дія: ✅ перезапущено systemd
+```
+
+### **Bot Manager (MANUAL CONTROL)**
+Зручні команди для ручного керування ботом:
+
+```bash
+python3 tools/bot_manager.py status    # детальний статус
+python3 tools/bot_manager.py restart   # перезапуск
+python3 tools/bot_manager.py logs      # останні 30 рядків логів  
+python3 tools/bot_manager.py follow    # live логи
+python3 tools/bot_manager.py health    # швидкий health check
+```
+
+**Приклад виводу:**
+```
+✅ insilver-v3 — активний
+📍 PID        : 2433
+🧠 RAM        : 45.2 MB
+🔁 Рестарти : 0  
+⏰ Останній старт: Tue 2026-03-24 20:18:11
+```
+
+### **Конфігурація алертів:**
+**Для Влада (власника):**
+```bash
+# Додати в .env
+ALERT_CHAT_ID=123456789  # chat_id Влада
+```
+
+**Для розробника:**
+```bash
+# Алерти надсилаються Сашку за замовчуванням
+# Або через systemd env
+sudo systemctl edit insilver-monitor
+```
+
+### **Логи моніторингу:**
+```bash
+# Live логи monitor системи
+journalctl -u insilver-monitor -f
+
+# Файловий лог
+tail -f logs/monitor.log
+```
+
+---
+
 ## 🧪 СИСТЕМА ТЕСТУВАННЯ
 
 ### **Автотестер v3 (5 рівнів)**

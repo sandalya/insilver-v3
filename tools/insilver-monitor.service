@@ -1,0 +1,31 @@
+[Unit]
+Description=InSilver v3 — Bot Health Monitor
+After=network.target insilver-v3.service
+Wants=insilver-v3.service
+
+[Service]
+Type=simple
+User=sashok
+WorkingDirectory=/home/sashok/.openclaw/workspace/insilver-v3
+
+# Шлях до Python в venv
+ExecStart=/home/sashok/.openclaw/workspace/insilver-v3/venv/bin/python tools/monitor_bot.py
+
+# Хто отримує алерти (зараз Сашко — змінити на chat_id Влада коли треба)
+# Якщо ALERT_CHAT_ID не встановлений тут — береться з .env
+# Environment=ALERT_CHAT_ID=123456789
+
+Environment=CHECK_INTERVAL=300
+
+Restart=on-failure
+RestartSec=60
+StartLimitBurst=3
+StartLimitIntervalSec=300
+
+# Логи через journald
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=insilver-monitor
+
+[Install]
+WantedBy=multi-user.target
