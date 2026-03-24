@@ -25,10 +25,22 @@ if [ "$EUID" -ne 0 ]; then
     exit 1
 fi
 
+# Перевірка що в правильній директорії
+if [ ! -f "main.py" ]; then
+    echo "❌ Запускай з insilver-v3/ директорії"
+    exit 1
+fi
+
 # Перевірка що файл сервісу існує
 if [ ! -f "$SERVICE_FILE" ]; then
     echo "❌ Файл $SERVICE_FILE не знайдено"
     exit 1
+fi
+
+echo "🔧 Перевірка залежностей..."
+if ! ./venv/bin/python -c "import requests" 2>/dev/null; then
+    echo "📦 Встановлення requests..."
+    ./venv/bin/pip install requests
 fi
 
 echo "📄 Копіювання сервісу..."

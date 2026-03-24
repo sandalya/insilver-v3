@@ -20,7 +20,7 @@ Environment=CHECK_INTERVAL=300
 Restart=on-failure
 RestartSec=60
 StartLimitBurst=3
-StartLimitIntervalSec=300
+StartLimitInterval=300
 
 # Логи через journald
 StandardOutput=journal
