@@ -25,9 +25,6 @@ logging.basicConfig(
     ]
 )
 
-# CRITICAL: Enable bot.client logger
-logging.getLogger("bot.client").setLevel(logging.INFO)
-
 log = logging.getLogger("main")
 
 def global_exception_handler(exc_type, exc_value, exc_traceback):

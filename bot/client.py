@@ -243,8 +243,8 @@ def setup_handlers(app: Application):
     for handler in create_admin_handlers():
         app.add_handler(handler)
     
-    # Add regular handlers
-    app.add_handler(build_order_handler())
+    # Add regular handlers - SIMPLE FIRST for debugging
     app.add_handler(CommandHandler("start", cmd_start))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+    app.add_handler(build_order_handler())  # Complex handler last
     log.info("Handlers зареєстровано (включно з admin)")
