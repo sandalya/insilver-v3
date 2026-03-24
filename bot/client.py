@@ -232,6 +232,16 @@ async def error_handler(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         except:
             pass  # Can't send message
 
+async def debug_all_updates(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    """Debug handler - спрацює на БУДЬ-ЩО (Claude.AI рекомендація)"""
+    log.info(f"🔍 [DEBUG] RAW UPDATE: {type(update)} - {update}")
+    if update.message:
+        log.info(f"🔍 [DEBUG] MESSAGE TEXT: {update.message.text}")
+    elif update.edited_message:
+        log.info(f"🔍 [DEBUG] EDITED MESSAGE: {update.edited_message.text}")
+    else:
+        log.info(f"🔍 [DEBUG] OTHER UPDATE TYPE")
+
 def setup_handlers(app: Application):
     # Import admin handlers
     from bot.admin import create_admin_handlers
@@ -239,12 +249,16 @@ def setup_handlers(app: Application):
     # Add error handler
     app.add_error_handler(error_handler)
     
-    # Add admin handlers (високий пріоритет)
-    for handler in create_admin_handlers():
-        app.add_handler(handler)
+    # ✅ CLAUDE.AI: Debug handler ПЕРШИМ (group=-1)
+    app.add_handler(MessageHandler(filters.ALL, debug_all_updates), group=-1)
     
-    # Add regular handlers - SIMPLE FIRST for debugging
-    app.add_handler(CommandHandler("start", cmd_start))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-    app.add_handler(build_order_handler())  # Complex handler last
-    log.info("Handlers зареєстровано (включно з admin)")
+    # ✅ Regular handlers BEFORE admin (нижчий пріоритет групи)
+    app.add_handler(CommandHandler("start", cmd_start), group=1)
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message), group=1)
+    app.add_handler(build_order_handler(), group=1)  
+    
+    # ✅ Admin handlers в окремій групі з вищим номером (lower priority)
+    for handler in create_admin_handlers():
+        app.add_handler(handler, group=2)
+    
+    log.info("Handlers: regular (group=1) + admin (group=2) + debug (group=-1)")

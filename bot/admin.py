@@ -1962,18 +1962,20 @@ async def handle_admin_callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 
 # Експортні хендлери для main
 def create_admin_handlers():
-    """Створити хендлери для адмін панелі."""
+    """Створити хендлери для адмін панелі - ВИПРАВЛЕНО після Claude.AI діагностики."""
     from telegram.ext import CommandHandler
     
     return [
         CommandHandler("admin", admin_panel),
         CallbackQueryHandler(handle_admin_callback, pattern="^(admin_|trainer_|knowledge_|recovery_|unconfirmed_)"),
+        # ✅ ВИПРАВЛЕНО: Тільки для admin чату + context-aware
         MessageHandler(
-            filters.TEXT,
+            filters.TEXT & filters.User(ADMIN_IDS) & filters.Regex(r"^(edit_|trainer_|admin_)"),
             handle_edit_input
         ),
+        # ✅ ВИПРАВЛЕНО: Trainer тільки для admin + після /trainer команд
         MessageHandler(
-            filters.TEXT | filters.PHOTO | filters.VIDEO | filters.Document.ALL,
+            (filters.TEXT | filters.PHOTO | filters.VIDEO | filters.Document.ALL) & filters.User(ADMIN_IDS),
             handle_trainer_input
         )
     ]

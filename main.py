@@ -28,6 +28,10 @@ logging.basicConfig(
 # CRITICAL: Enable bot.client logger
 logging.getLogger("bot.client").setLevel(logging.INFO)
 
+# ✅ CLAUDE.AI: Enable telegram debug logging  
+logging.getLogger("telegram").setLevel(logging.DEBUG)
+logging.getLogger("telegram.ext").setLevel(logging.DEBUG)
+
 log = logging.getLogger("main")
 
 def global_exception_handler(exc_type, exc_value, exc_traceback):
@@ -51,76 +55,54 @@ async def simple_error_handler(update: object, context):
     health_checker.increment_errors()
 
 def main():
-    """Main entry point - simplified like minimal bot"""
+    """Main entry point - Claude.AI рекомендований підхід"""
     sys.excepthook = global_exception_handler
     
-    async def async_main():
-        try:
-            # Validate configuration
-            if not BOT_TOKEN:
-                log.error("❌ TELEGRAM_TOKEN не встановлений в .env")
-                sys.exit(1)
-            
-            acquire_lock()
-            log.info("🚀 InSilver v3 FIXED стартує...")
-
-            # Simple application build (like minimal bot)
-            app = Application.builder().token(BOT_TOKEN).build()
-            
-            # Add simple error handler first
-            app.add_error_handler(simple_error_handler)
-            
-            # Setup existing handlers (KNOWN WORKING)
-            setup_handlers(app)
-            log.info(f"✅ Handlers налаштовано: {len(app.handlers[0])} handlers")
-            
-            # Health monitoring
-            health_checker.mark_activity()
-            
-            # Initialize and start (MINIMAL BOT METHOD)
-            await app.initialize()
-            await app.start()
-            
-            log.info("✅ Application started")
-            
-            # Start polling with SIMPLE settings (like minimal bot)
-            await app.updater.start_polling(
-                drop_pending_updates=False,  # ⭐ CRITICAL!
-                poll_interval=1.0,
-                timeout=10,  # Shorter like minimal bot
-                read_timeout=10,
-                write_timeout=10,
-                connect_timeout=10,
-            )
-            
-            log.info("🎯 POLLING STARTED - BOT READY!")
-            
-            # Keep running (like minimal bot)
-            while True:
-                await asyncio.sleep(1)
-                health_checker.mark_activity()
-        
-        except KeyboardInterrupt:
-            log.info("⏹️ Отримано SIGINT, завершуємо...")
-        except Exception as e:
-            log.critical(f"💥 Критична помилка: {e}")
-            log.critical(f"Traceback:\\n{traceback.format_exc()}")
-            health_checker.increment_errors()
-            raise
-        finally:
-            log.info("🔄 Завершуємо роботу...")
-            if 'app' in locals():
-                await app.updater.stop()
-                await app.stop()
-                await app.shutdown()
-            release_lock()
-    
-    # Run async main
-    try:
-        asyncio.run(async_main())
-    except Exception as e:
-        log.critical(f"💥 Критична помилка в main(): {e}")
+    # Validate configuration first
+    if not BOT_TOKEN:
+        log.error("❌ TELEGRAM_TOKEN не встановлений в .env")
         sys.exit(1)
+    
+    try:
+        acquire_lock()
+        log.info("🚀 InSilver v3 CLAUDE-FIXED стартує...")
+        
+        # ✅ ПРАВИЛЬНО: використовуємо run_polling (рекомендація Claude.AI)
+        app = Application.builder().token(BOT_TOKEN).build()
+        
+        # Add error handler first
+        app.add_error_handler(simple_error_handler)
+        
+        # Setup handlers
+        setup_handlers(app)
+        log.info(f"✅ Handlers налаштовано: {len(app.handlers[1])} handlers")
+        
+        # Health monitoring
+        health_checker.mark_activity()
+        
+        log.info("🎯 ЗАПУСК run_polling() - Claude.AI рішення")
+        
+        # ✅ run_polling сам керує циклом подій, ініціалізацією та dispatcher
+        app.run_polling(
+            drop_pending_updates=False,
+            poll_interval=1.0,
+            timeout=10,
+            read_timeout=10, 
+            write_timeout=10,
+            connect_timeout=10,
+            allowed_updates=None  # All updates
+        )
+        
+    except KeyboardInterrupt:
+        log.info("⏹️ Отримано SIGINT, завершуємо...")
+    except Exception as e:
+        log.critical(f"💥 Критична помилка: {e}")
+        log.critical(f"Traceback:\\n{traceback.format_exc()}")
+        health_checker.increment_errors()
+        raise
+    finally:
+        log.info("🔄 Завершуємо роботу...")
+        release_lock()
 
 if __name__ == "__main__":
     main()

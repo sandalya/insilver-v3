@@ -1,0 +1,41 @@
+{
+  "timestamp": "2026-03-25T00:16:09.654375",
+  "duration_seconds": 0.41,
+  "results": {
+    "syntax": {
+      "passed": 9,
+      "failed": 0,
+      "errors": []
+    },
+    "imports": {
+      "passed": 2,
+      "failed": 5,
+      "errors": [
+        "core.ai: No module named 'anthropic'",
+        "core.prompt: cannot import name 'get_consultant_prompt' from 'core.prompt' (/home/sashok/.openclaw/workspace/insi",
+        "core.catalog: cannot import name 'get_catalog_data' from 'core.catalog' (/home/sashok/.openclaw/workspace/insilver",
+        "bot.client: No module named 'telegram'",
+        "bot.admin: No module named 'telegram'"
+      ]
+    },
+    "basic": {
+      "passed": 0,
+      "failed": 0,
+      "errors": []
+    },
+    "ai": {
+      "passed": 0,
+      "failed": 0,
+      "errors": []
+    },
+    "performance": {
+      "passed": 0,
+      "failed": 0,
+      "errors": []
+    }
+  },
+  "summary": {
+    "total_passed": 11,
+    "total_failed": 5
+  }
+}
