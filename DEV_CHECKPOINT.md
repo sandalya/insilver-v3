@@ -11,7 +11,7 @@ insilver-monitor     ✅ active — health monitoring + auto-restart
 ```
 
 ### ✅ СИСТЕМИ ГОТОВІ:
-- **Auto Testing** — 5-рівневий autotester (syntax → performance)
+- **Auto Testing** — 6-рівневий autotester (syntax → telegram commands)
 - **Health & Stability** — monitor + auto-restart + Telegram alerts  
 - **Cost Control** — medium sensitivity warnings
 - **Documentation** — повна InSilver Docs для Влада

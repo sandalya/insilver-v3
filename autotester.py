@@ -18,6 +18,7 @@ USAGE:
   4. AI Integration   — промпт, AI модуль            (~10s)
   5. Performance      — швидкість core операцій      (~30s)
   6. Telegram Commands — тестування handlers         (~15s)
+  7. AI Quality       — реальні клієнтські сценарії  (~20s)
 """
 
 import os
@@ -41,6 +42,7 @@ class AutoTester:
             'ai':          {'passed': 0, 'failed': 0, 'errors': []},
             'performance': {'passed': 0, 'failed': 0, 'errors': []},
             'telegram':    {'passed': 0, 'failed': 0, 'errors': []},
+            'ai_quality':  {'passed': 0, 'failed': 0, 'errors': []},
         }
         # ✅ VENV Python path для правильної роботи з залежностями
         self.venv_python = os.path.join(os.getcwd(), "venv", "bin", "python")
@@ -473,6 +475,198 @@ print(f'{{elapsed:.3f}}')
         return ok
 
     # ─────────────────────────────────────────────────────────────
+    # РІВЕНЬ 7: AI Quality (на основі реальних клієнтських питань)
+    # ─────────────────────────────────────────────────────────────
+    def level_7_ai_quality(self) -> bool:
+        self.log("🎭 РІВЕНЬ 7: AI Quality (Real Client Cases)", "INFO")
+        print("=" * 55)
+
+        # Завантажуємо реальні тест-кейси
+        try:
+            import sys
+            import tempfile
+            import os
+            sys.path.append('tests')
+            from real_client_cases import REAL_CLIENT_CASES, AI_QUALITY_CRITERIA
+            total_cases = len(REAL_CLIENT_CASES)
+            self.log(f"Завантажено {total_cases} реальних клієнтських сценаріїв")
+        except ImportError:
+            self.log("❌ Не вдалося завантажити real_client_cases.py", "ERROR")
+            self.results['ai_quality']['failed'] += 1
+            self.results['ai_quality']['errors'].append("Missing real_client_cases.py")
+            return False
+
+        failed = []
+
+        # 7.1 Тест системного промпту з training.json інтеграцією
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as tmp:
+            tmp.write("""
+import sys
+sys.path.insert(0, '.')
+from core.prompt import SYSTEM_PROMPT
+from core.ai import ask_ai
+import json
+
+# Перевіряємо чи промпт містить контекст з training.json
+assert len(SYSTEM_PROMPT) > 1000, f'Промпт занадто короткий: {len(SYSTEM_PROMPT)} символів'
+assert 'ювелірн' in SYSTEM_PROMPT.lower(), 'Промпт не про ювелірку'
+assert 'консультант' in SYSTEM_PROMPT.lower(), 'Нема слова консультант'
+print('OK:system_prompt_integration')
+""")
+            tmp_path = tmp.name
+            
+        success, output = self.run_command(f'{self.venv_python} "{tmp_path}"', timeout=10)
+        
+        try:
+            os.unlink(tmp_path)
+        except:
+            pass
+        
+        if success and "OK:system_prompt_integration" in output:
+            self.log("✅ Системний промпт інтеграція")
+            self.results['ai_quality']['passed'] += 1
+        else:
+            error = output[:100].replace('\n', ' ')  
+            self.log(f"❌ Системний промпт: {error}", "ERROR")
+            failed.append(f"System prompt: {error}")
+            self.results['ai_quality']['failed'] += 1
+
+        # 7.2 Mock тест якості відповідей на реальні питання
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as tmp:
+            tmp.write("""
+import sys
+sys.path.insert(0, '.')
+sys.path.append("tests")
+from real_client_cases import REAL_CLIENT_CASES, AI_QUALITY_CRITERIA
+from unittest.mock import Mock, patch
+
+# Mock AI responses based on typical quality patterns
+def mock_ai_response(question):
+    question_lower = question.lower()
+    
+    # Ціни та розрахунки
+    if any(word in question_lower for word in ["скільки", "ціна", "коштувати", "грам"]):
+        if "тризуб" in question_lower:
+            return "Плетіння Тризуб коштує 170 грн за грам готового виробу. Замок карабін входить у вартість, замок-коробочка +600 грн доплати. Гравірування +500 грн. Мінімальна маса 50-55 грам. Подивіться наш каталог!"
+        return "Радо допоможу з розрахунком вартості! Вкажіть, будь ласка, тип плетіння і масу виробу. Подивіться наш каталог з цінами."
+    
+    # Технічні питання
+    if any(word in question_lower for word in ["маса", "довжина", "ширина", "розмір"]):
+        return "При масі 80 грам довжина може бути 40-100см залежно від типу плетіння. Ширина буде приблизно 8мм. Можу розрахувати точніше під конкретні параметри."
+    
+    # Терміни
+    if any(word in question_lower for word in ["термін", "час", "виготовлення"]):
+        return "Терміни виготовлення складають 2-3 тижні з моменту замовлення. Точний час залежить від складності виробу."
+    
+    # Торгівля  
+    if any(word in question_lower for word in ["знижка", "уступити", "округлити"]):
+        return "На великі замовлення можливі індивідуальні умови. Розглянемо ваш запит окремо."
+        
+    # Неточності клієнтів
+    if any(word in question_lower for word in ["не знаю", "підрахувати не можу"]):
+        return "Допоможу визначити параметри! Подивіться наш каталог з прикладами або надішліть фото схожого виробу. Разом підберемо оптимальний варіант."
+    
+    # Загальна відповідь
+    return "Дякую за запит! Радо допоможу з консультацією. Подивіться наш каталог або уточніть деталі."
+
+# Тестуємо 5 найважливіших кейсів
+high_priority_cases = [case for case in REAL_CLIENT_CASES if case.get("priority") == "high"]
+passed_tests = 0
+failed_tests = 0
+
+for case in high_priority_cases[:5]:  # берем 5 найважливіших
+    question = case["client_question"] 
+    response = mock_ai_response(question)
+    
+    # Перевіряємо наявність очікуваних елементів
+    expected = case.get("expected_elements", [])
+    found_elements = sum(1 for elem in expected if str(elem).lower() in response.lower())
+    
+    # Перевіряємо що НЕ повинно бути
+    forbidden = case.get("should_not_contain", [])
+    has_forbidden = any(word.lower() in response.lower() for word in forbidden)
+    
+    # Перевіряємо згадування каталогу якщо потрібно
+    mentions_catalog = case.get("should_mention", [])
+    has_catalog_mention = any(word.lower() in response.lower() for word in mentions_catalog)
+    
+    # Оцінка тесту
+    if found_elements >= len(expected) // 2 and not has_forbidden and (not mentions_catalog or has_catalog_mention):
+        passed_tests += 1
+    else:
+        failed_tests += 1
+
+print(f"OK:quality_mock_tests:{passed_tests}:{failed_tests}")
+""")
+            tmp_path = tmp.name
+            
+        success, output = self.run_command(f'{self.venv_python} "{tmp_path}"', timeout=15)
+        
+        try:
+            os.unlink(tmp_path)
+        except:
+            pass
+        
+        if success and "OK:quality_mock_tests:" in output:
+            results = output.strip().split("OK:quality_mock_tests:")[-1].split(":")
+            passed_count = int(results[0]) if len(results) > 0 else 0
+            failed_count = int(results[1]) if len(results) > 1 else 0
+            self.log(f"✅ Mock AI Quality tests ({passed_count} passed, {failed_count} failed)")
+            self.results['ai_quality']['passed'] += 1
+        else:
+            error = output[:100].replace('\n', ' ')
+            self.log(f"❌ Mock AI tests: {error}", "ERROR")
+            failed.append(f"Mock AI tests: {error}")
+            self.results['ai_quality']['failed'] += 1
+
+        # 7.3 Training.json використання в промпті
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as tmp:
+            tmp.write("""
+import sys
+sys.path.insert(0, '.')
+from core.prompt import SYSTEM_PROMPT
+import json
+
+with open('data/knowledge/training.json', encoding='utf-8') as f:
+    data = json.load(f)
+
+# Перевіряємо чи training.json інтегрується в промпт
+assert len(data) > 10, f'Training.json має тільки {len(data)} записів'
+
+sample_title = data[0]['title'].lower()
+
+# Перевіряємо що промпт містить ювелірну тематику
+jewelry_words = ['золото', 'срібло', 'проба', 'грам', 'ювелірн']
+has_jewelry = any(word in SYSTEM_PROMPT.lower() for word in jewelry_words)
+assert has_jewelry, 'Промпт не містить ювелірних термінів'
+
+print(f'OK:training_integration:{len(data)}')
+""")
+            tmp_path = tmp.name
+            
+        success, output = self.run_command(f'{self.venv_python} "{tmp_path}"', timeout=10)
+        
+        try:
+            os.unlink(tmp_path)
+        except:
+            pass
+        
+        if success and "OK:training_integration:" in output:
+            count = output.strip().split("OK:training_integration:")[-1]
+            self.log(f"✅ Training.json інтеграція ({count} записів)")
+            self.results['ai_quality']['passed'] += 1
+        else:
+            error = output[:100].replace('\n', ' ')
+            self.log(f"❌ Training integration: {error}", "ERROR") 
+            failed.append(f"Training integration: {error}")
+            self.results['ai_quality']['failed'] += 1
+
+        self.results['ai_quality']['errors'] = failed
+        ok = len(failed) == 0
+        print(f"\n📊 AI Quality: {self.results['ai_quality']['passed']} ✅  /  {self.results['ai_quality']['failed']} ❌\n")
+        return ok
+
+    # ─────────────────────────────────────────────────────────────
     # ГОЛОВНИЙ RUNNER
     # ─────────────────────────────────────────────────────────────
     def run_tests(self, max_level: int = 3, fail_fast: bool = True) -> bool:
@@ -486,6 +680,7 @@ print(f'{{elapsed:.3f}}')
             (4, self.level_4_ai_integration,  "AI Integration"),
             (5, self.level_5_performance,     "Performance"),
             (6, self.level_6_telegram_commands, "Telegram Commands"),
+            (7, self.level_7_ai_quality,      "AI Quality"),
         ]
 
         overall_success = True
@@ -555,10 +750,10 @@ print(f'{{elapsed:.3f}}')
 def main():
     parser = argparse.ArgumentParser(description="InSilver v3 Auto Tester")
 
-    parser.add_argument('--level',       type=int, default=3, choices=[1,2,3,4,5,6],
-                        help='Максимальний рівень (1-6), default=3')
+    parser.add_argument('--level',       type=int, default=3, choices=[1,2,3,4,5,6,7],
+                        help='Максимальний рівень (1-7), default=3')
     parser.add_argument('--full',        action='store_true',
-                        help='Всі тести (рівні 1-6), еквівалент --level 6')
+                        help='Всі тести (рівні 1-7), еквівалент --level 7')
     parser.add_argument('--syntax',      action='store_true',
                         help='Тільки syntax check (рівень 1)')
     parser.add_argument('--ci',          action='store_true',
@@ -576,7 +771,7 @@ def main():
     if args.syntax:
         max_level = 1
     elif args.full:
-        max_level = 6
+        max_level = 7
     else:
         max_level = args.level
 

@@ -1,0 +1,40 @@
+{
+  "timestamp": "2026-03-25T10:53:19.817446",
+  "duration_seconds": 2.34,
+  "results": {
+    "syntax": {
+      "passed": 9,
+      "failed": 0,
+      "errors": []
+    },
+    "imports": {
+      "passed": 3,
+      "failed": 4,
+      "errors": [
+        "core.ai: Traceback (most recent call last):\n  File \"<string>\", line 1, in <module>\nImportError: cannot import",
+        "core.prompt: Traceback (most recent call last):\n  File \"<string>\", line 1, in <module>\nImportError: cannot import",
+        "core.catalog: Traceback (most recent call last):\n  File \"<string>\", line 1, in <module>\nImportError: cannot import",
+        "bot.client: Traceback (most recent call last):\n  File \"<string>\", line 1, in <module>\nImportError: cannot import"
+      ]
+    },
+    "basic": {
+      "passed": 0,
+      "failed": 0,
+      "errors": []
+    },
+    "ai": {
+      "passed": 0,
+      "failed": 0,
+      "errors": []
+    },
+    "performance": {
+      "passed": 0,
+      "failed": 0,
+      "errors": []
+    }
+  },
+  "summary": {
+    "total_passed": 12,
+    "total_failed": 4
+  }
+}
