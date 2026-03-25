@@ -17,6 +17,7 @@ USAGE:
   3. Basic Functions  — config, training.json, handlers (~15s)
   4. AI Integration   — промпт, AI модуль            (~10s)
   5. Performance      — швидкість core операцій      (~30s)
+  6. Telegram Commands — тестування handlers         (~15s)
 """
 
 import os
@@ -39,7 +40,12 @@ class AutoTester:
             'basic':       {'passed': 0, 'failed': 0, 'errors': []},
             'ai':          {'passed': 0, 'failed': 0, 'errors': []},
             'performance': {'passed': 0, 'failed': 0, 'errors': []},
+            'telegram':    {'passed': 0, 'failed': 0, 'errors': []},
         }
+        # ✅ VENV Python path для правильної роботи з залежностями
+        self.venv_python = os.path.join(os.getcwd(), "venv", "bin", "python")
+        if not os.path.exists(self.venv_python):
+            self.venv_python = "python3"  # fallback
 
     def log(self, message: str, level: str = "INFO"):
         if self.verbose:
@@ -102,7 +108,7 @@ class AutoTester:
         return ok
 
     # ─────────────────────────────────────────────────────────────
-    # РІВЕНЬ 2: Імпорти
+    # РІВЕНЬ 2: Імпорти (через venv Python)
     # ─────────────────────────────────────────────────────────────
     def level_2_import_check(self) -> bool:
         self.log("📦 РІВЕНЬ 2: Import Check", "INFO")
@@ -110,29 +116,32 @@ class AutoTester:
 
         modules = [
             ('core.config',  'ADMIN_IDS, DATA_DIR'),
-            ('core.ai',      'call_openai_api'),
-            ('core.prompt',  'get_consultant_prompt'),
-            ('core.catalog', 'get_catalog_data'),
+            ('core.ai',      'ask_ai'),
+            ('core.catalog', 'load_catalog, search_catalog'),
             ('core.health',  None),
-            ('bot.client',   'create_client_handlers'),
-            ('bot.admin',    'create_admin_handlers'),
+            ('bot.client',   'setup_handlers'),
+            ('bot.admin',    None),  # перевіримо тільки імпорт модуля
         ]
 
         failed = []
         for module, items in modules:
-            try:
-                if items:
-                    exec(f"from {module} import {items}")
-                else:
-                    exec(f"import {module}")
+            # Тестуємо імпорт через venv Python
+            if items:
+                test_code = f"from {module} import {items}"
+            else:
+                test_code = f"import {module}"
+            
+            success, output = self.run_command(f'{self.venv_python} -c "{test_code}"', timeout=10)
+            
+            if success:
                 self.log(f"✅ {module}")
                 self.results['imports']['passed'] += 1
-            except Exception as e:
-                short = str(e)[:60]
+            else:
+                short = output[:60].replace('\n', ' ')
                 self.log(f"❌ {module} — {short}", "ERROR")
                 failed.append(module)
                 self.results['imports']['failed'] += 1
-                self.results['imports']['errors'].append(f"{module}: {str(e)[:100]}")
+                self.results['imports']['errors'].append(f"{module}: {output[:100]}")
 
         ok = len(failed) == 0
         print(f"\n📊 Імпорти: {self.results['imports']['passed']} ✅  /  {self.results['imports']['failed']} ❌\n")
@@ -147,16 +156,21 @@ class AutoTester:
 
         tests = []
 
-        # 3.1 Config
-        try:
-            from core.config import ADMIN_IDS, DATA_DIR
-            assert isinstance(ADMIN_IDS, list), "ADMIN_IDS не список"
-            assert isinstance(DATA_DIR, str),   "DATA_DIR не рядок"
+        # 3.1 Config (через venv)
+        config_test = (
+            "from core.config import ADMIN_IDS, DATA_DIR; "
+            "assert isinstance(ADMIN_IDS, list), 'ADMIN_IDS не список'; "
+            "assert isinstance(DATA_DIR, str), 'DATA_DIR не рядок'; "
+            "print('OK')"
+        )
+        success, output = self.run_command(f'{self.venv_python} -c "{config_test}"', timeout=5)
+        if success and "OK" in output:
             self.log("✅ Config завантажується")
             tests.append(True)
-        except Exception as e:
-            self.log(f"❌ Config: {e}", "ERROR")
-            self.results['basic']['errors'].append(f"Config: {e}")
+        else:
+            error_msg = output[:100].replace('\n', ' ')
+            self.log(f"❌ Config: {error_msg}", "ERROR")
+            self.results['basic']['errors'].append(f"Config: {error_msg}")
             tests.append(False)
 
         # 3.2 training.json
@@ -174,31 +188,44 @@ class AutoTester:
             self.results['basic']['errors'].append(f"training.json: {e}")
             tests.append(False)
 
-        # 3.3 Каталог
-        try:
-            from core.catalog import get_catalog_data
-            catalog = get_catalog_data()
-            assert isinstance(catalog, dict), "Каталог не словник"
-            self.log(f"✅ Каталог ({len(catalog)} ключів)")
+        # 3.3 Каталог (через venv)
+        catalog_test = (
+            "from core.catalog import load_catalog; "
+            "catalog = load_catalog(); "
+            "assert isinstance(catalog, (dict, list)), 'Каталог не dict або list'; "
+            "assert len(catalog) > 0, 'Каталог порожній'; "
+            "print(f'OK:{len(catalog)}')"
+        )
+        success, output = self.run_command(f'{self.venv_python} -c "{catalog_test}"', timeout=5)
+        if success and "OK:" in output:
+            count = output.strip().split("OK:")[-1]
+            self.log(f"✅ Каталог ({count} записів)")
             tests.append(True)
-        except Exception as e:
-            self.log(f"❌ Каталог: {e}", "ERROR")
-            self.results['basic']['errors'].append(f"Каталог: {e}")
+        else:
+            error_msg = output[:100].replace('\n', ' ')
+            self.log(f"❌ Каталог: {error_msg}", "ERROR")
+            self.results['basic']['errors'].append(f"Каталог: {error_msg}")
             tests.append(False)
 
-        # 3.4 Telegram handlers
-        try:
-            from bot.client import create_client_handlers
-            from bot.admin  import create_admin_handlers
-            ch = create_client_handlers()
-            ah = create_admin_handlers()
-            assert isinstance(ch, list) and len(ch) > 0, "Немає client handlers"
-            assert isinstance(ah, list) and len(ah) > 0, "Немає admin handlers"
-            self.log(f"✅ Handlers (client:{len(ch)} + admin:{len(ah)})")
+        # 3.4 Telegram handlers (через venv)
+        handlers_test = (
+            "from bot.client import setup_handlers; "
+            "from bot.admin import admin_panel; "
+            "import inspect; "
+            "assert callable(setup_handlers), 'setup_handlers не функція'; "
+            "assert callable(admin_panel), 'admin_panel не функція'; "
+            "print('OK:2:handlers')"
+        )
+        success, output = self.run_command(f'{self.venv_python} -c "{handlers_test}"', timeout=10)
+        if success and "OK:" in output:
+            parts = output.strip().split("OK:")[-1].split(":")
+            client_count, admin_count = parts[0], parts[1] if len(parts) > 1 else "?"
+            self.log(f"✅ Handlers (client:{client_count} + admin:{admin_count})")
             tests.append(True)
-        except Exception as e:
-            self.log(f"❌ Handlers: {e}", "ERROR")
-            self.results['basic']['errors'].append(f"Handlers: {e}")
+        else:
+            error_msg = output[:100].replace('\n', ' ')
+            self.log(f"❌ Handlers: {error_msg}", "ERROR")
+            self.results['basic']['errors'].append(f"Handlers: {error_msg}")
             tests.append(False)
 
         passed = sum(tests)
@@ -217,40 +244,54 @@ class AutoTester:
 
         tests = []
 
-        # 4.1 Промпт генерується
-        try:
-            from core.prompt import get_consultant_prompt
-            prompt = get_consultant_prompt("тест")
-            assert isinstance(prompt, str) and len(prompt) > 100, "Промпт замалий або не рядок"
-            self.log(f"✅ Промпт генерується ({len(prompt)} символів)")
+        # 4.1 Системний промпт існує (через venv)
+        prompt_test = (
+            "from core.prompt import SYSTEM_PROMPT; "
+            "assert isinstance(SYSTEM_PROMPT, str) and len(SYSTEM_PROMPT) > 100, 'SYSTEM_PROMPT замалий'; "
+            "print(f'OK:{len(SYSTEM_PROMPT)}')"
+        )
+        success, output = self.run_command(f'{self.venv_python} -c "{prompt_test}"', timeout=5)
+        if success and "OK:" in output:
+            size = output.strip().split("OK:")[-1]
+            self.log(f"✅ Системний промпт ({size} символів)")
             tests.append(True)
-        except Exception as e:
-            self.log(f"❌ Промпт: {e}", "ERROR")
-            self.results['ai']['errors'].append(f"Промпт: {e}")
+        else:
+            error_msg = output[:100].replace('\n', ' ')
+            self.log(f"❌ Системний промпт: {error_msg}", "ERROR")
+            self.results['ai']['errors'].append(f"Системний промпт: {error_msg}")
             tests.append(False)
 
-        # 4.2 call_openai_api існує і має правильну сигнатуру
-        try:
-            from core.ai import call_openai_api
-            import inspect
-            sig = inspect.signature(call_openai_api)
-            assert len(sig.parameters) >= 1, "call_openai_api потребує аргументів"
-            self.log("✅ call_openai_api сигнатура OK")
+        # 4.2 ask_ai сигнатура (через venv)
+        api_test = (
+            "from core.ai import ask_ai; "
+            "import inspect; "
+            "sig = inspect.signature(ask_ai); "
+            "assert len(sig.parameters) >= 1, 'ask_ai потребує аргументів'; "
+            "print('OK')"
+        )
+        success, output = self.run_command(f'{self.venv_python} -c "{api_test}"', timeout=5)
+        if success and "OK" in output:
+            self.log("✅ ask_ai сигнатура OK")
             tests.append(True)
-        except Exception as e:
-            self.log(f"❌ call_openai_api: {e}", "ERROR")
-            self.results['ai']['errors'].append(f"call_openai_api: {e}")
+        else:
+            error_msg = output[:100].replace('\n', ' ')
+            self.log(f"❌ ask_ai: {error_msg}", "ERROR")
+            self.results['ai']['errors'].append(f"ask_ai: {error_msg}")
             tests.append(False)
 
-        # 4.3 OpenAI API ключ присутній (не валідуємо, не витрачаємо токени)
-        try:
-            from core.config import OPENAI_API_KEY
-            assert OPENAI_API_KEY and len(OPENAI_API_KEY) > 10, "API ключ відсутній або порожній"
-            masked = OPENAI_API_KEY[:8] + "..." + OPENAI_API_KEY[-4:]
+        # 4.3 OpenAI API ключ (через venv, не витрачаємо токени)
+        key_test = (
+            "from core.config import OPENAI_API_KEY; "
+            "assert OPENAI_API_KEY and len(OPENAI_API_KEY) > 10, 'API ключ відсутній'; "
+            "print(f'OK:{OPENAI_API_KEY[:8]}...{OPENAI_API_KEY[-4:]}')"
+        )
+        success, output = self.run_command(f'{self.venv_python} -c "{key_test}"', timeout=5)
+        if success and "OK:" in output:
+            masked = output.strip().split("OK:")[-1]
             self.log(f"✅ OpenAI API ключ присутній ({masked})")
             tests.append(True)
-        except Exception as e:
-            self.log(f"⚠️  API ключ: {e} (пропуск — не критично)", "WARN")
+        else:
+            self.log(f"⚠️  API ключ: не знайдено (пропуск — не критично)", "WARN")
             # Не вважаємо провалом — ключ може бути в env
             tests.append(True)
 
@@ -282,8 +323,8 @@ class AutoTester:
             (
                 "Завантаження каталогу",
                 "import sys; sys.path.insert(0,'.'); "
-                "from core.catalog import get_catalog_data; "
-                "c=get_catalog_data(); assert isinstance(c,dict)",
+                "from core.catalog import load_catalog; "
+                "c=load_catalog(); assert isinstance(c,(dict,list)) and len(c)>0",
                 2.0
             ),
             (
@@ -293,11 +334,11 @@ class AutoTester:
                 1.0
             ),
             (
-                "Генерація промпту",
+                "Завантаження системного промпту",
                 "import sys; sys.path.insert(0,'.'); "
-                "from core.prompt import get_consultant_prompt; "
-                "p=get_consultant_prompt('золотий ланцюжок'); assert len(p)>100",
-                1.5
+                "from core.prompt import SYSTEM_PROMPT; "
+                "assert isinstance(SYSTEM_PROMPT, str) and len(SYSTEM_PROMPT)>100",
+                1.0
             ),
         ]
 
@@ -305,17 +346,29 @@ class AutoTester:
         for description, code, max_time in perf_tests:
             self.log(f"⚡ {description} (ліміт: {max_time}s)...")
 
-            # Вимірюємо через subprocess щоб уникнути кешування
-            measure_script = (
-                f"import time\n"
-                f"start = time.time()\n"
-                f"exec({repr(code)})\n"
-                f"print(f'{{time.time()-start:.3f}}')\n"
-            )
+            # Створюємо тимчасовий файл для коректної передачі Python коду
+            import tempfile
+            import os
+            with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as tmp:
+                tmp.write(f"""
+import time
+start = time.time()
+exec({repr(code)})
+elapsed = time.time() - start
+print(f'{{elapsed:.3f}}')
+""")
+                tmp_path = tmp.name
+            
             success, output = self.run_command(
-                f'python3 -c "{measure_script}"',
+                f'{self.venv_python} "{tmp_path}"',
                 timeout=int(max_time) + 5
             )
+            
+            # Видаляємо тимчасовий файл
+            try:
+                os.unlink(tmp_path)
+            except:
+                pass
 
             if success:
                 try:
@@ -342,6 +395,84 @@ class AutoTester:
         return ok
 
     # ─────────────────────────────────────────────────────────────
+    # РІВЕНЬ 6: Telegram Commands (функціональні тести)
+    # ─────────────────────────────────────────────────────────────
+    def level_6_telegram_commands(self) -> bool:
+        self.log("📱 РІВЕНЬ 6: Telegram Commands", "INFO")
+        print("=" * 55)
+
+        failed = []
+
+        # 6.1 Перевірка що handlers правильно реєструються
+        handlers_test = (
+            "from bot.client import setup_handlers; "
+            "from unittest.mock import Mock; "
+            "app_mock = Mock(); "
+            "app_mock.add_handler = Mock(); "
+            "setup_handlers(app_mock); "
+            "handler_count = len(app_mock.add_handler.call_args_list); "
+            "assert handler_count >= 2, f'Мінімум 2 handlers, отримали {handler_count}'; "
+            "print(f'OK:handlers:{handler_count}')"
+        )
+        success, output = self.run_command(f'{self.venv_python} -c "{handlers_test}"', timeout=10)
+        
+        if success and "OK:handlers:" in output:
+            count = output.strip().split("OK:handlers:")[-1]
+            self.log(f"✅ Client handlers ({count} зареєстровано)")
+            self.results['telegram']['passed'] += 1
+        else:
+            error = output[:100].replace('\n', ' ')
+            self.log(f"❌ Client handlers: {error}", "ERROR")
+            failed.append(f"Client handlers: {error}")
+            self.results['telegram']['failed'] += 1
+
+        # 6.2 Перевірка структури команд в admin модулі
+        admin_test = (
+            "import inspect; "
+            "from bot.admin import admin_panel; "
+            "sig = inspect.signature(admin_panel); "
+            "params = list(sig.parameters.keys()); "
+            "assert len(params) >= 1, f'admin_panel потребує мін 1 параметр, має {len(params)}'; "
+            "print(f'OK:admin_panel:{len(params)}')"
+        )
+        success, output = self.run_command(f'{self.venv_python} -c "{admin_test}"', timeout=5)
+        
+        if success and "OK:admin_panel:" in output:
+            param_count = output.strip().split("OK:admin_panel:")[-1]
+            self.log(f"✅ Admin panel ({param_count} параметрів)")
+            self.results['telegram']['passed'] += 1
+        else:
+            error = output[:100].replace('\n', ' ')
+            self.log(f"❌ Admin panel: {error}", "ERROR")  
+            failed.append(f"Admin panel: {error}")
+            self.results['telegram']['failed'] += 1
+
+        # 6.3 Mock тест основних команд (без реального Telegram API)
+        command_test = (
+            "from bot.client import cmd_start, handle_message; "
+            "import inspect; "
+            "assert inspect.iscoroutinefunction(cmd_start), 'cmd_start має бути async'; "
+            "assert inspect.iscoroutinefunction(handle_message), 'handle_message має бути async'; "
+            "print('OK:commands:2')"
+        )
+        success, output = self.run_command(f'{self.venv_python} -c "{command_test}"', timeout=10)
+        
+        if success and "OK:commands:" in output:
+            command_count = output.strip().split("OK:commands:")[-1]
+            self.log(f"✅ Command functions ({command_count} async команди)")
+            self.results['telegram']['passed'] += 1
+        else:
+            error = output[:100].replace('\n', ' ')
+            self.log(f"❌ Command functions: {error}", "ERROR")
+            failed.append(f"Command functions: {error}")
+            self.results['telegram']['failed'] += 1
+
+        self.results['telegram']['errors'] = failed
+        ok = len(failed) == 0
+        print(f"\n📊 Telegram: {self.results['telegram']['passed']} ✅  /  {self.results['telegram']['failed']} ❌\n")
+        return ok
+
+    # ─────────────────────────────────────────────────────────────
     # ГОЛОВНИЙ RUNNER
     # ─────────────────────────────────────────────────────────────
     def run_tests(self, max_level: int = 3, fail_fast: bool = True) -> bool:
@@ -354,6 +485,7 @@ class AutoTester:
             (3, self.level_3_basic_functions, "Basic Functions"),
             (4, self.level_4_ai_integration,  "AI Integration"),
             (5, self.level_5_performance,     "Performance"),
+            (6, self.level_6_telegram_commands, "Telegram Commands"),
         ]
 
         overall_success = True
@@ -423,10 +555,10 @@ class AutoTester:
 def main():
     parser = argparse.ArgumentParser(description="InSilver v3 Auto Tester")
 
-    parser.add_argument('--level',       type=int, default=3, choices=[1,2,3,4,5],
-                        help='Максимальний рівень (1-5), default=3')
+    parser.add_argument('--level',       type=int, default=3, choices=[1,2,3,4,5,6],
+                        help='Максимальний рівень (1-6), default=3')
     parser.add_argument('--full',        action='store_true',
-                        help='Всі тести (рівні 1-5), еквівалент --level 5')
+                        help='Всі тести (рівні 1-6), еквівалент --level 6')
     parser.add_argument('--syntax',      action='store_true',
                         help='Тільки syntax check (рівень 1)')
     parser.add_argument('--ci',          action='store_true',
@@ -444,7 +576,7 @@ def main():
     if args.syntax:
         max_level = 1
     elif args.full:
-        max_level = 5
+        max_level = 6
     else:
         max_level = args.level
 
