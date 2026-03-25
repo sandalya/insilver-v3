@@ -342,7 +342,8 @@ def setup_handlers(app: Application):
     app.add_handler(CommandHandler("catalog", cmd_catalog), group=1)
     app.add_handler(CommandHandler("contact", cmd_contact), group=1)  
     app.add_handler(CommandHandler("help", cmd_help), group=1)
-    app.add_handler(CallbackQueryHandler(handle_callback_query), group=1)
+    # Callback handlers з specific patterns
+    app.add_handler(CallbackQueryHandler(handle_callback_query, pattern="^(contact_master|show_catalog)$"), group=1)
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message), group=1)
     app.add_handler(build_order_handler(), group=1)  
     

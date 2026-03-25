@@ -1,0 +1,92 @@
+#!/usr/bin/env python3
+"""
+🎭 InSilver UI Tester - Production Ready
+Quick access to UI workflow testing
+Usage: ./ui_tester [--quick|--full|--scenario name]
+"""
+
+import sys
+import os
+import subprocess
+from pathlib import Path
+
+# Add project root to Python path
+project_root = Path(__file__).parent
+sys.path.insert(0, str(project_root))
+venv_python = project_root / "venv/bin/python3"
+
+def main():
+    """Main UI Tester entry point"""
+    
+    print("🎭 InSilver UI Tester - Production Ready")
+    print("=" * 45)
+    
+    # Parse simple arguments
+    args = sys.argv[1:] if len(sys.argv) > 1 else ["--full"]
+    
+    if "--help" in args or "-h" in args:
+        print("""
+🎭 InSilver UI Tester Commands:
+
+  ./ui_tester                    # Run full test suite
+  ./ui_tester --quick           # Run quick essential tests only  
+  ./ui_tester --full            # Run complete workflow testing (default)
+  ./ui_tester --scenario NAME   # Run specific scenario
+  
+Available scenarios:
+  - workflow    # Complete workflow simulation
+  - filesystem  # File system integrity check
+  - callbacks   # Callback handler testing  
+  - ai          # AI functionality testing
+  
+Examples:
+  ./ui_tester --quick
+  ./ui_tester --scenario callbacks
+  ./ui_tester --full
+        """)
+        return
+    
+    # Determine test mode
+    if "--quick" in args:
+        mode = "quick"
+    elif any(arg.startswith("--scenario") for arg in args):
+        mode = "scenario"
+        # Find scenario name
+        scenario_name = "workflow"  # default
+        for i, arg in enumerate(args):
+            if arg == "--scenario" and i + 1 < len(args):
+                scenario_name = args[i + 1]
+                break
+        args = ["--scenario", scenario_name]
+    else:
+        mode = "full"
+        args = []
+    
+    print(f"🎯 Running UI tests in {mode.upper()} mode")
+    print(f"📁 Project: {project_root}")
+    
+    # Run UI workflow tester
+    try:
+        cmd = [str(venv_python), "tests/ui_workflow_tester.py"] + args
+        
+        result = subprocess.run(
+            cmd,
+            cwd=project_root,
+            timeout=300  # 5 minute timeout
+        )
+        
+        # Exit with same code as the test
+        sys.exit(result.returncode)
+        
+    except subprocess.TimeoutExpired:
+        print("⏰ Test timeout - tests took longer than 5 minutes")
+        sys.exit(1)
+    except KeyboardInterrupt:
+        print("\n⛔ Test interrupted by user")
+        sys.exit(1)
+    except Exception as e:
+        print(f"❌ Error running tests: {e}")
+        sys.exit(1)
+
+if __name__ == "__main__":
+    main()

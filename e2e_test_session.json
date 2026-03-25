@@ -1,0 +1,146 @@
+{
+  "test_session": {
+    "user_id": 189793675,
+    "username": "test_user_e2e",
+    "started": 1774469837.9344532,
+    "cost_tracking": {
+      "tool_calls": 10,
+      "estimated_cost": 0.017000000000000005,
+      "budget_limit": 15.0
+    }
+  },
+  "conversation": [
+    {
+      "type": "user_message",
+      "content": "/start",
+      "timestamp": 1774469837.9344532
+    },
+    {
+      "type": "bot_response",
+      "content": {
+        "text": "Вітаємо! Ви звернулись до майстерні InSilver",
+        "buttons": [
+          {
+            "text": "🌐 Наш сайт",
+            "url": "https://www.insilver.pp.ua/"
+          },
+          {
+            "text": "📱 Зв'язок з майстром",
+            "callback_data": "contact_master"
+          },
+          {
+            "text": "📋 Показати каталог",
+            "callback_data": "show_catalog"
+          }
+        ]
+      },
+      "timestamp": 1774469838.9355767
+    },
+    {
+      "type": "user_message",
+      "content": "ланцюжки",
+      "timestamp": 1774469838.9356203
+    },
+    {
+      "type": "bot_response",
+      "content": {
+        "text": "*СРІБНИЙ ЛАНЦЮЖОК \"РАМЗЕС\" МАСОЮ ~100 грам*\nКатегорія: Ланцюжки / Рамзес",
+        "buttons": [
+          {
+            "text": "🛒 Замовити цей виріб",
+            "callback_data": "o:42"
+          },
+          {
+            "text": "📝 Індивідуальне замовлення",
+            "callback_data": "order_full"
+          }
+        ]
+      },
+      "timestamp": 1774469839.9367745
+    },
+    {
+      "type": "button_click",
+      "button_text": "🛒 Замовити цей виріб",
+      "callback_data": "o:42",
+      "timestamp": 1774469839.9368176
+    },
+    {
+      "type": "user_message",
+      "content": "Олександр",
+      "timestamp": 1774469839.936831
+    },
+    {
+      "type": "bot_response",
+      "content": {
+        "text": "Дякую за повідомлення: Олександр. Можу допомогти з консультацією!",
+        "buttons": []
+      },
+      "timestamp": 1774469840.937967
+    },
+    {
+      "type": "user_message",
+      "content": "+380501234567",
+      "timestamp": 1774469840.937999
+    },
+    {
+      "type": "bot_response",
+      "content": {
+        "text": "Дякую за повідомлення: +380501234567. Можу допомогти з консультацією!",
+        "buttons": []
+      },
+      "timestamp": 1774469841.939136
+    },
+    {
+      "type": "user_message",
+      "content": "Київ",
+      "timestamp": 1774469841.9391692
+    },
+    {
+      "type": "bot_response",
+      "content": {
+        "text": "Дякую за повідомлення: Київ. Можу допомогти з консультацією!",
+        "buttons": []
+      },
+      "timestamp": 1774469842.940318
+    },
+    {
+      "type": "user_message",
+      "content": "/start",
+      "timestamp": 1774469843.4410236
+    },
+    {
+      "type": "bot_response",
+      "content": {
+        "text": "Вітаємо! Ви звернулись до майстерні InSilver",
+        "buttons": [
+          {
+            "text": "🌐 Наш сайт",
+            "url": "https://www.insilver.pp.ua/"
+          },
+          {
+            "text": "📱 Зв'язок з майстром",
+            "callback_data": "contact_master"
+          },
+          {
+            "text": "📋 Показати каталог",
+            "callback_data": "show_catalog"
+          }
+        ]
+      },
+      "timestamp": 1774469844.4421768
+    },
+    {
+      "type": "user_message",
+      "content": "каталог",
+      "timestamp": 1774469844.442223
+    },
+    {
+      "type": "bot_response",
+      "content": {
+        "text": "Дякую за повідомлення: каталог. Можу допомогти з консультацією!",
+        "buttons": []
+      },
+      "timestamp": 1774469845.4433768
+    }
+  ]
+}
