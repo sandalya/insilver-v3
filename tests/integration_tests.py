@@ -181,6 +181,101 @@ def test_admin_handlers_proper_group():
         print(f"   ❌ Test failed: {e}")
         return False
 
+def test_no_group_priority_conflicts():
+    """Test handlers in same group don't conflict by type (Claude.ai exact code)"""
+    print("\n⚔️ TESTING GROUP PRIORITY CONFLICTS")
+    print("-" * 36)
+    
+    try:
+        from bot.client import setup_handlers
+        from telegram.ext import Application, MessageHandler
+        
+        app = Application.builder().token("fake:token").build()
+        setup_handlers(app)
+        
+        handlers = get_registered_handlers(app)
+        
+        all_conflicts_resolved = True
+        
+        for group_num, group_handlers in handlers.items():
+            # Check for multiple catch-all MessageHandlers in same group
+            catch_all_count = sum(
+                1 for h in group_handlers 
+                if isinstance(h, MessageHandler) and 
+                str(h.filters) in ("filters.ALL", "True", "None")
+            )
+            
+            if catch_all_count <= 1:
+                print(f"   ✅ Group {group_num}: {catch_all_count} catch-all MessageHandler (OK)")
+            else:
+                print(f"   ❌ Group {group_num}: {catch_all_count} catch-all MessageHandlers (CONFLICT!)")
+                all_conflicts_resolved = False
+        
+        return all_conflicts_resolved
+        
+    except Exception as e:
+        print(f"   ❌ Test failed: {e}")
+        return False
+
+def test_conversation_states_are_complete():
+    """Test all ConversationHandler states have handlers (Claude.ai exact code)"""
+    print("\n🗣️ TESTING CONVERSATION STATE COMPLETENESS")
+    print("-" * 42)
+    
+    try:
+        from bot.client import setup_handlers
+        from telegram.ext import Application, ConversationHandler
+        
+        app = Application.builder().token("fake:token").build()
+        setup_handlers(app)
+        
+        handlers = get_registered_handlers(app)
+        
+        all_states_complete = True
+        conversation_count = 0
+        
+        for group_num, group_handlers in handlers.items():
+            for handler in group_handlers:
+                if isinstance(handler, ConversationHandler):
+                    conversation_count += 1
+                    print(f"   📝 ConversationHandler found in group {group_num}")
+                    
+                    # Check all states have handlers
+                    for state, state_handlers in handler.states.items():
+                        if state_handlers:
+                            print(f"      ✅ State {state}: {len(state_handlers)} handler(s)")
+                        else:
+                            print(f"      ❌ State {state}: NO HANDLERS (broken conversation!)")
+                            all_states_complete = False
+                    
+                    # Check entry points
+                    if handler.entry_points:
+                        print(f"      ✅ Entry points: {len(handler.entry_points)}")
+                    else:
+                        print(f"      ❌ No entry points (unreachable conversation!)")
+                        all_states_complete = False
+                    
+                    # Check fallbacks
+                    if handler.fallbacks:
+                        print(f"      ✅ Fallbacks: {len(handler.fallbacks)}")
+                    else:
+                        print(f"      ⚠️ No fallbacks (consider adding for error handling)")
+        
+        if conversation_count == 0:
+            print("   ⚠️ No ConversationHandlers found")
+            return True  # Not an error if no conversations
+        
+        if all_states_complete:
+            print(f"   ✅ All {conversation_count} conversations have complete states")
+        else:
+            print(f"   ❌ Some conversations have incomplete states")
+        
+        return all_states_complete
+        
+    except Exception as e:
+        print(f"   ❌ Test failed: {e}")
+        return False
+
 def test_handler_group_structure():
     """Test overall handler group structure makes sense"""
     print("\n🏗️ TESTING HANDLER GROUP STRUCTURE")
@@ -233,6 +328,8 @@ def run_integration_tests():
         test_error_handler_registered,
         test_no_duplicate_command_handlers,
         test_admin_handlers_proper_group,
+        test_no_group_priority_conflicts,  # Claude.ai additional pattern
+        test_conversation_states_are_complete,  # Claude.ai additional pattern
         test_handler_group_structure
     ]
     

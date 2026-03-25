@@ -457,28 +457,36 @@ async def view_all_knowledge(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
             InlineKeyboardButton("🔙 Назад", callback_data="admin_view")
         ]])
     else:
-        text = f"📄 ВСІ ЗАПИСИ БАЗИ ЗНАНЬ ({len(confirmed_records)})\n\n"
+        # PAGINATION FIX: Show only first 15 records to avoid message_too_long
+        display_records = confirmed_records[:15]  # Limit to first 15
+        total_count = len(confirmed_records)
         
-        for i, record in enumerate(confirmed_records, 1):
+        text = f"📄 ЗАПИСИ БАЗИ ЗНАНЬ ({total_count} всього, показано перші 15)\n\n"
+        
+        for i, record in enumerate(display_records, 1):
             record_id = record.get("id", "?")
-            title = record.get("title", f"Запис {record_id}")
+            title = record.get("title", f"Запис {record_id}")[:50]  # Limit title length
             created = record.get("created", "")[:10] if record.get("created") else "?"
             
-            # Отримуємо повний контент
+            # Отримуємо СКОРОЧЕНИЙ контент
             content = record.get("content", [])
             if content and isinstance(content, list) and content[0]:
                 full_text = content[0].get("text", "").strip()
+                # CRITICAL: Limit content to first 80 characters
+                display_text = full_text[:80] + "..." if len(full_text) > 80 else full_text
             else:
-                full_text = "Порожній запис"
+                display_text = "Порожній запис"
             
             # Медіа інфо
             media_count = len(record.get("media", []))
             media_info = f" 📎{media_count}" if media_count > 0 else ""
             
-            # Форматуємо запис
-            text += f"{i}. | {created}{media_info} (ID: {record_id})\n"
-            text += f"{full_text}\n"
-            text += f"──────────────────────\n\n"
+            # Форматуємо запис (КОРОТКО)
+            text += f"{i}. {title} | {created}{media_info}\n"
+            text += f"   {display_text}\n\n"
+        
+        if total_count > 15:
+            text += f"ℹ️ Показано 15 з {total_count} записів. Для перегляду всіх використовуйте редагування.\n\n"
         
         keyboard = InlineKeyboardMarkup([
             [InlineKeyboardButton("✏️ Редагувати записи", callback_data="admin_edit_records")],

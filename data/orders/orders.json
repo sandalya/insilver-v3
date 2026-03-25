@@ -278,5 +278,38 @@
     "delivery": "Нова Пошта",
     "created_at": "2026-03-22T19:50:31.800539",
     "name": "апалпл"
+  },
+  {
+    "type": "браслет",
+    "weaving": "Панцир",
+    "length": "23см",
+    "weight": "33",
+    "plating": "⚫️ Чорніння",
+    "clasp": "🔗 Карабін",
+    "note": "➖ Немає",
+    "contact": "55353",
+    "comment": "➖ Немає",
+    "id": "6431F594",
+    "tg_id": 189793675,
+    "tg_username": "gamaiunchik",
+    "tg_name": "Alex",
+    "delivery": "Нова Пошта",
+    "created_at": "2026-03-25T23:03:45.425498",
+    "name": "55353"
+  },
+  {
+    "type": "кулон",
+    "collection": "Зодіак",
+    "weight": "44",
+    "note": "➖ Немає",
+    "contact": "іаві524",
+    "comment": "➖ Немає",
+    "id": "87A90D8D",
+    "tg_id": 189793675,
+    "tg_username": "gamaiunchik",
+    "tg_name": "Alex",
+    "delivery": "Нова Пошта",
+    "created_at": "2026-03-25T23:04:14.461740",
+    "name": "іаві524"
   }
 ]
