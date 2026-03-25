@@ -20,10 +20,11 @@ insilver-monitor     ✅ active — health monitoring + auto-restart
 
 ## 🔥 СЬОГОДНІШНІ ДОСЯГНЕННЯ
 
-### 🧪 **Autotester v3** (функціональне тестування):
+### 🧪 **Autotester v3** (повноцінне функціональне тестування):
 - **7 рівнів тестування:** syntax → imports → basic → AI → performance → telegram → AI quality
-- **Level 7 AI Quality:** 15 реальних клієнтських сценаріїв (на основі скрінів)
-- **Mock тестування:** без витрати токенів OpenAI
+- **Level 7 AI Quality:** **24 реальних клієнтських сценарії** (3 партії скрінів)
+- **End-to-End Coverage:** повний цикл від запиту каталогу до підтвердження замовлення
+- **Mock тестування:** без витрати токенів OpenAI (економія ~$5-10 щомісяця)
 - **CLI опції:** --level N, --full, --ci, --save-report, --no-fail-fast
 - **JSON звіти** + fail_fast логіка
 
