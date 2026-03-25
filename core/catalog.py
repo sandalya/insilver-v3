@@ -146,13 +146,23 @@ def keyword_search(query: str, top_n: int = 3) -> list:
     scored.sort(key=lambda x: x[0], reverse=True)
     return [i for _, i in scored[:top_n]]
 
+def escape_markdown_v2(text: str) -> str:
+    """Escape special characters for Telegram Markdown V2."""
+    import re
+    # Telegram MarkdownV2 special chars: _*[]()~`>#+-=|{}.!
+    special_chars = r'([_*\[\]()~`>#+=|{}.!-])'
+    return re.sub(special_chars, r'\\\1', text)
+
 def format_item_text(item: dict) -> str:
     title    = html.unescape(item.get("title", ""))
     category = item.get("category", "")
     subcat   = item.get("subcategory", "")
     params   = item.get("params", {})
 
-    lines = [f"*{title}*"]
+    # Escape спеціальні символи для Telegram  
+    safe_title = escape_markdown_v2(title)
+    
+    lines = [f"*{safe_title}*"]
     lines.append(f"Категорія: {category} / {subcat}")
     if params.get("finish"):
         lines.append(f"Оздоблення: {params['finish']}")
