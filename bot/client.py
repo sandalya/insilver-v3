@@ -17,6 +17,8 @@ log = logging.getLogger("bot.client")
 LOGO_SIZE = 61514
 
 
+
+
 def order_keyboard(item: dict, idx: int) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("🛒 Замовити цей виріб", callback_data=f"o:{idx}")],
@@ -180,6 +182,8 @@ async def handle_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         if ctx.user_data.get("order"):
             return
 
+
+
         await ctx.bot.send_chat_action(update.effective_chat.id, "typing")
 
         # Search catalog with error handling
@@ -342,10 +346,14 @@ def setup_handlers(app: Application):
     app.add_handler(CommandHandler("catalog", cmd_catalog), group=1)
     app.add_handler(CommandHandler("contact", cmd_contact), group=1)  
     app.add_handler(CommandHandler("help", cmd_help), group=1)
+    # ✅ ORDER HANDLER FIRST - має перехоплювати conversations перед загальним handler
+    app.add_handler(build_order_handler(), group=1)
+    
     # Callback handlers з specific patterns
     app.add_handler(CallbackQueryHandler(handle_callback_query, pattern="^(contact_master|show_catalog)$"), group=1)
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message), group=1)
-    app.add_handler(build_order_handler(), group=1)  
+    
+    # General message handler LAST - щоб не перехоплював conversation messages
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message), group=1)  
     
     # ✅ Admin handlers в окремій групі з вищим номером (lower priority)
     for handler in create_admin_handlers():
