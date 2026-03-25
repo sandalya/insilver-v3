@@ -11,7 +11,7 @@ insilver-monitor     ✅ active — health monitoring + auto-restart
 ```
 
 ### ✅ СИСТЕМИ ГОТОВІ:
-- **Auto Testing** — 6-рівневий autotester (syntax → telegram commands)
+- **Auto Testing** — 7-рівневий autotester (syntax → AI quality)
 - **Health & Stability** — monitor + auto-restart + Telegram alerts  
 - **Cost Control** — medium sensitivity warnings
 - **Documentation** — повна InSilver Docs для Влада
@@ -20,11 +20,12 @@ insilver-monitor     ✅ active — health monitoring + auto-restart
 
 ## 🔥 СЬОГОДНІШНІ ДОСЯГНЕННЯ
 
-### 🧪 **Autotester v3** (мігровано з v2):
-- **5 рівнів тестування:** syntax, imports, basic, AI, performance
-- **CLI опції:** --level N, --ci, --save-report, --no-fail-fast
+### 🧪 **Autotester v3** (функціональне тестування):
+- **7 рівнів тестування:** syntax → imports → basic → AI → performance → telegram → AI quality
+- **Level 7 AI Quality:** 15 реальних клієнтських сценаріїв (на основі скрінів)
+- **Mock тестування:** без витрати токенів OpenAI
+- **CLI опції:** --level N, --full, --ci, --save-report, --no-fail-fast
 - **JSON звіти** + fail_fast логіка
-- **Адаптовано під v3** архітектуру (core/, bot/)
 
 ### 🔧 **Health & Stability система** (Claude.AI Prio 1):
 - **bot_manager.py** — systemctl wrapper (7 команд)
