@@ -69,6 +69,12 @@ sudo bash tools/install_monitor.sh    # встановити monitor
 ## 📊 ROADMAP STATUS
 
 ### ✅ ЗАВЕРШЕНО:
+- **🧠 ENHANCED AI TRAINING** — ПОВНІСТЮ ГОТОВО! (Prio 1)
+  - training.json: 15 → 36 записів (+140% knowledge)
+  - ENHANCED_SYSTEM_PROMPT: 1768 → 10717 символів  
+  - Context-aware responses в ai.py
+  - 88% coverage ключових фраз з 7 партій скрінів
+  - Smart категоризація: ціни/замовлення/лом/доставка/виміри
 - **Layer 1 Автотестування** — 7 рівнів готово (31 реальний сценарій)
 - **Layer 1 Health & Stability** — Claude.AI Prio 1 завершено  
 - **Cost optimization** — warnings система + mock testing економія
@@ -84,10 +90,10 @@ sudo bash tools/install_monitor.sh    # встановити monitor
 
 **16 high-priority тестів** — критичні user scenarios
 
-### 🔄 НАСТУПНЕ (Prio 2):
-- **Level 8: Full Integration** — system-wide E2E тестування
-- **Vision AI System** — automated_vision_tester + beauty_score
-- **Analytics** — analyze_logs.py для статистики роботи
+### 🔄 НАСТУПНЕ (за пріоритетом):
+- **Level 8: Full Integration** — system-wide E2E тестування (на розгляді)
+- **Vision AI System** — automated_vision_tester + beauty_score (Prio 2)
+- **Analytics** — analyze_logs.py для статистики роботи (Prio 3)
 
 ### 🎯 МІНОР ФІКСИ:
 - Autotester import помилки (venv активація в тестах)
