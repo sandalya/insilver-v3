@@ -1,6 +1,6 @@
 {
-  "test_session": "ui_test_1774470782",
-  "timestamp": 1774470787.7987666,
+  "test_session": "ui_test_1774471692",
+  "timestamp": 1774471698.404607,
   "total_scenarios": 4,
   "passed_scenarios": 4,
   "failed_scenarios": 0,
@@ -42,7 +42,7 @@
         }
       ],
       "errors": [],
-      "duration": 2.4328718185424805
+      "duration": 2.4312188625335693
     },
     {
       "name": "file_system_testing",
