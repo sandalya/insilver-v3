@@ -21,7 +21,6 @@ def order_keyboard(item: dict, idx: int) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("🛒 Замовити цей виріб", callback_data=f"o:{idx}")],
         [InlineKeyboardButton("📝 Індивідуальне замовлення", callback_data="order_full")],
-        [InlineKeyboardButton("❓ В чому різниця?", callback_data="explain_order_types")],
     ])
 
 
@@ -128,24 +127,6 @@ async def handle_callback_query(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
                   "✝️ **Хрести та ладанки** з гравіюванням\n" + \
                   "🎨 **Ексклюзивні вироби** під замовлення\n\n" + \
                   "Напишіть назву виробу або плетіння, і я покажу варіанти з фото і цінами!"
-        await query.edit_message_text(response, parse_mode="Markdown")
-    
-    elif query.data == "explain_order_types":
-        response = "🛒 **ТИПИ ЗАМОВЛЕНЬ — В ЧОМУ РІЗНИЦЯ?**\n\n" + \
-                  "**🛒 \"Замовити цей виріб\"**\n" + \
-                  "• Точно такий як на фото\n" + \
-                  "• Стандартні параметри (маса, довжина)\n" + \
-                  "• Швидке оформлення (ім'я, телефон, адреса)\n" + \
-                  "• Менше питань, швидше виготовлення\n\n" + \
-                  "**📝 \"Індивідуальне замовлення\"**\n" + \
-                  "• Під ваші параметри\n" + \
-                  "• Можна змінити: довжину, масу, покриття\n" + \
-                  "• Детальна анкета з побажаннями\n" + \
-                  "• Консультація майстра\n\n" + \
-                  "**💡 Приклад:**\n" + \
-                  "Ланцюжок Рамзес 60см/100г у каталозі\n" + \
-                  "🛒 Швидко → отримаєте точно 60см/100г\n" + \
-                  "📝 Індивідуально → можете замовити 55см/80г з родіюванням"
         await query.edit_message_text(response, parse_mode="Markdown")
 
 
