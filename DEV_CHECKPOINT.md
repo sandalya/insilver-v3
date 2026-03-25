@@ -20,10 +20,11 @@ insilver-monitor     ✅ active — health monitoring + auto-restart
 
 ## 🔥 СЬОГОДНІШНІ ДОСЯГНЕННЯ
 
-### 🧪 **Autotester v3** (повноцінне функціональне тестування):
+### 🧪 **Autotester v3** (повноцінне функціональне + бізнес тестування):
 - **7 рівнів тестування:** syntax → imports → basic → AI → performance → telegram → AI quality
-- **Level 7 AI Quality:** **24 реальних клієнтських сценарії** (3 партії скрінів)
-- **End-to-End Coverage:** повний цикл від запиту каталогу до підтвердження замовлення
+- **Level 7 AI Quality:** **31 реальний клієнтський сценарій** (4 партії скрінів)
+- **Business Coverage:** складні бізнес-процеси (лом, комбіновані замовлення, логістика)
+- **End-to-End Coverage:** повний цикл від каталогу до прийому в виготовлення
 - **Mock тестування:** без витрати токенів OpenAI (економія ~$5-10 щомісяця)
 - **CLI опції:** --level N, --full, --ci, --save-report, --no-fail-fast
 - **JSON звіти** + fail_fast логіка
@@ -68,11 +69,23 @@ sudo bash tools/install_monitor.sh    # встановити monitor
 ## 📊 ROADMAP STATUS
 
 ### ✅ ЗАВЕРШЕНО:
-- **Layer 1 Автотестування** — 5 рівнів готово
+- **Layer 1 Автотестування** — 7 рівнів готово (31 реальний сценарій)
 - **Layer 1 Health & Stability** — Claude.AI Prio 1 завершено  
-- **Cost optimization** — warnings система
+- **Cost optimization** — warnings система + mock testing економія
+
+### 🎭 **LEVEL 7 - РЕАЛЬНІ БІЗНЕС-ПРОЦЕСИ:**
+**31 сценарій з 4 партій скрінів:**
+- 💰 Ціни і розрахунки (тризуб, бісмарк, граненій якір)
+- 🔧 Технічні параметри + виміри  
+- 🎨 Персоналізація + покриття (родій, позолота)
+- 💸 Торгівля і знижки + прийом лому
+- 📋 End-to-end замовлення + логістика
+- ⏰ Тайминг бізнес-процесів + workflow оптимізація
+
+**16 high-priority тестів** — критичні user scenarios
 
 ### 🔄 НАСТУПНЕ (Prio 2):
+- **Level 8: Full Integration** — system-wide E2E тестування
 - **Vision AI System** — automated_vision_tester + beauty_score
 - **Analytics** — analyze_logs.py для статистики роботи
 
