@@ -2,7 +2,7 @@
 import logging
 import time
 from telegram import Update, InputMediaPhoto, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
+from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, filters, ContextTypes
 from core.config import BOT_TOKEN, ADMIN_IDS
 from core.ai import ask_ai
 from core.order_context import has_order_intent
@@ -18,8 +18,8 @@ LOGO_SIZE = 61514
 
 def order_keyboard(item: dict, idx: int) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton("🛒 Замовити", callback_data=f"o:{idx}")],
-        [InlineKeyboardButton("📋 Оформити замовлення", callback_data="order_full")],
+        [InlineKeyboardButton("🛒 Замовити цей виріб", callback_data=f"o:{idx}")],
+        [InlineKeyboardButton("📝 Індивідуальне замовлення", callback_data="order_full")],
     ])
 
 
@@ -88,13 +88,44 @@ async def cmd_start(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     log.info(f"START від {user.id} ({username})")
     health_checker.increment_messages()
     
-    response = f"Вітаємо, {name}\n\nВи звернулись до майстерні InSilver — виготовляємо срібні прикраси на замовлення.\n\nЧим можу допомогти?"
+    response = f"Вітаємо, {name}! 👋\n\nВи звернулись до майстерні InSilver — виготовляємо срібні прикраси на замовлення.\n\n💎 У нас є ланцюжки, браслети, печатки, хрести та інші вироби зі срібла 925°.\n\n🛠️ Працюємо як з готовими виробами, так і під індивідуальне замовлення.\n\nЧим можу допомогти?"
+    
+    # Створюємо клавіатуру з кнопками
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton("🌐 Наш сайт", url="https://insilver.com.ua")],
+        [InlineKeyboardButton("📱 Зв'язок з майстром", callback_data="contact_master")],
+        [InlineKeyboardButton("📋 Показати каталог", callback_data="show_catalog")],
+    ])
     
     # Логування
     log_user_message(user.id, username, "/start")
     log_bot_response(user.id, username, response)
     
-    await update.message.reply_text(response)
+    await update.message.reply_text(response, reply_markup=keyboard)
+
+
+async def handle_callback_query(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    """Handle callback queries from inline keyboards."""
+    query = update.callback_query
+    await query.answer()
+    
+    if query.data == "contact_master":
+        response = "📱 **Контакти майстра Влада:**\n\n" + \
+                  "🟢 Telegram: @vlad_insilver\n" + \
+                  "📞 Телефон: +380XX XXX XXXX\n" + \
+                  "⏰ Робочі години: Пн-Пт 9:00-18:00\n\n" + \
+                  "Майстер консультує з технічних питань і особливостей виготовлення."
+        await query.edit_message_text(response, parse_mode="Markdown")
+    
+    elif query.data == "show_catalog":
+        response = "📋 **Основні категорії нашого каталогу:**\n\n" + \
+                  "🔗 **Ланцюжки:** Рамзес, Тризуб, Якірний, Водоспад\n" + \
+                  "📿 **Браслети:** Бісмарк, Рамзес, Фараон, Імператор\n" + \
+                  "💍 **Печатки та персні** різних розмірів\n" + \
+                  "✝️ **Хрести та ладанки** з гравіюванням\n" + \
+                  "🎨 **Ексклюзивні вироби** під замовлення\n\n" + \
+                  "Напишіть назву виробу або плетіння, і я покажу варіанти з фото і цінами!"
+        await query.edit_message_text(response, parse_mode="Markdown")
 
 
 async def handle_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
@@ -254,6 +285,7 @@ def setup_handlers(app: Application):
     
     # ✅ Regular handlers BEFORE admin (нижчий пріоритет групи)
     app.add_handler(CommandHandler("start", cmd_start), group=1)
+    app.add_handler(CallbackQueryHandler(handle_callback_query), group=1)
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message), group=1)
     app.add_handler(build_order_handler(), group=1)  
     
