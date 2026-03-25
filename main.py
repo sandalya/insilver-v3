@@ -7,6 +7,7 @@ import signal
 import traceback
 import asyncio
 from telegram.ext import Application
+from telegram import BotCommand
 from core.lock import acquire_lock, release_lock
 from core.config import BOT_TOKEN, LOGS_DIR
 from core.health import health_checker

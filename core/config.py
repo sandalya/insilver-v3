@@ -23,3 +23,7 @@ SILVER_FILE = os.path.join(DATA_DIR, "silver.json")
 PID_FILE = os.path.join(BASE_DIR, "bot.pid")
 SITE_CATALOG = os.path.join(DATA_DIR, "site_catalog.json")
 OWNER_CHAT_ID = int(os.getenv("OWNER_CHAT_ID", "0"))
+
+# Контакти майстерні  
+MASTER_TELEGRAM = os.getenv("MASTER_TELEGRAM", "@gamaiunchik")
+WEBSITE_URL = os.getenv("WEBSITE_URL", "https://www.insilver.pp.ua/")

@@ -3,7 +3,8 @@ import logging
 import time
 from telegram import Update, InputMediaPhoto, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, filters, ContextTypes
-from core.config import BOT_TOKEN, ADMIN_IDS
+from telegram import BotCommand
+from core.config import BOT_TOKEN, ADMIN_IDS, MASTER_TELEGRAM, WEBSITE_URL
 from core.ai import ask_ai
 from core.order_context import has_order_intent
 from core.catalog import search_catalog, format_item_text
@@ -20,6 +21,7 @@ def order_keyboard(item: dict, idx: int) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("🛒 Замовити цей виріб", callback_data=f"o:{idx}")],
         [InlineKeyboardButton("📝 Індивідуальне замовлення", callback_data="order_full")],
+        [InlineKeyboardButton("❓ В чому різниця?", callback_data="explain_order_types")],
     ])
 
 
@@ -92,7 +94,7 @@ async def cmd_start(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     
     # Створюємо клавіатуру з кнопками
     keyboard = InlineKeyboardMarkup([
-        [InlineKeyboardButton("🌐 Наш сайт", url="https://insilver.com.ua")],
+        [InlineKeyboardButton("🌐 Наш сайт", url=WEBSITE_URL)],
         [InlineKeyboardButton("📱 Зв'язок з майстром", callback_data="contact_master")],
         [InlineKeyboardButton("📋 Показати каталог", callback_data="show_catalog")],
     ])
@@ -110,22 +112,77 @@ async def handle_callback_query(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     await query.answer()
     
     if query.data == "contact_master":
-        response = "📱 **Контакти майстра Влада:**\n\n" + \
-                  "🟢 Telegram: @vlad_insilver\n" + \
-                  "📞 Телефон: +380XX XXX XXXX\n" + \
-                  "⏰ Робочі години: Пн-Пт 9:00-18:00\n\n" + \
-                  "Майстер консультує з технічних питань і особливостей виготовлення."
+        response = "📱 **Контакти майстерні InSilver:**\n\n" + \
+                  f"🟢 **Telegram майстра:** {MASTER_TELEGRAM}\n" + \
+                  f"🌐 **Сайт:** {WEBSITE_URL}\n" + \
+                  "⏰ **Робочі години:** Пн-Пт 9:00-18:00\n\n" + \
+                  "💬 **Для консультацій** з технічних питань, особливостей виготовлення або індивідуальних замовлень пишіть напряму майстру.\n\n" + \
+                  "🛠️ **Складні питання** краще обговорювати особисто."
         await query.edit_message_text(response, parse_mode="Markdown")
     
     elif query.data == "show_catalog":
         response = "📋 **Основні категорії нашого каталогу:**\n\n" + \
                   "🔗 **Ланцюжки:** Рамзес, Тризуб, Якірний, Водоспад\n" + \
                   "📿 **Браслети:** Бісмарк, Рамзес, Фараон, Імператор\n" + \
-                  "💍 **Печатки та персні** різних розмірів\n" + \
+                  "💍 **Перстні та печатки** різних розмірів\n" + \
                   "✝️ **Хрести та ладанки** з гравіюванням\n" + \
                   "🎨 **Ексклюзивні вироби** під замовлення\n\n" + \
                   "Напишіть назву виробу або плетіння, і я покажу варіанти з фото і цінами!"
         await query.edit_message_text(response, parse_mode="Markdown")
+    
+    elif query.data == "explain_order_types":
+        response = "🛒 **ТИПИ ЗАМОВЛЕНЬ — В ЧОМУ РІЗНИЦЯ?**\n\n" + \
+                  "**🛒 \"Замовити цей виріб\"**\n" + \
+                  "• Точно такий як на фото\n" + \
+                  "• Стандартні параметри (маса, довжина)\n" + \
+                  "• Швидке оформлення (ім'я, телефон, адреса)\n" + \
+                  "• Менше питань, швидше виготовлення\n\n" + \
+                  "**📝 \"Індивідуальне замовлення\"**\n" + \
+                  "• Під ваші параметри\n" + \
+                  "• Можна змінити: довжину, масу, покриття\n" + \
+                  "• Детальна анкета з побажаннями\n" + \
+                  "• Консультація майстра\n\n" + \
+                  "**💡 Приклад:**\n" + \
+                  "Ланцюжок Рамзес 60см/100г у каталозі\n" + \
+                  "🛒 Швидко → отримаєте точно 60см/100г\n" + \
+                  "📝 Індивідуально → можете замовити 55см/80г з родіюванням"
+        await query.edit_message_text(response, parse_mode="Markdown")
+
+
+async def cmd_catalog(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    """Handle /catalog command."""
+    response = "📋 **Основні категорії нашого каталогу:**\n\n" + \
+              "🔗 **Ланцюжки:** Рамзес, Тризуб, Якірний, Водоспад\n" + \
+              "📿 **Браслети:** Бісмарк, Рамзес, Фараон, Імператор\n" + \
+              "💍 **Перстні та печатки** різних розмірів\n" + \
+              "✝️ **Хрести та ладанки** з гравіюванням\n" + \
+              "🎨 **Ексклюзивні вироби** під замовлення\n\n" + \
+              "Напишіть назву виробу або плетіння, і я покажу варіанти з фото і цінами!"
+    await update.message.reply_text(response, parse_mode="Markdown")
+
+
+async def cmd_contact(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    """Handle /contact command."""
+    response = "📱 **Контакти InSilver:**\n\n" + \
+              f"🌐 **Сайт:** {WEBSITE_URL}\n" + \
+              f"🟢 **Telegram майстра:** {MASTER_TELEGRAM}\n" + \
+              "⏰ **Робочі години:** Пн-Пт 9:00-18:00\n\n" + \
+              "📞 **Для термінових питань** пишіть в особисті повідомлення майстру.\n" + \
+              "🛠️ **Технічні консультації** та особливості виготовлення."
+    await update.message.reply_text(response, parse_mode="Markdown")
+
+
+async def cmd_help(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    """Handle /help command."""
+    response = "❓ **Як користуватися ботом:**\n\n" + \
+              "🔍 **Пошук:** Напишіть назву виробу (наприклад: \"ланцюжки\", \"браслет бісмарк\")\n" + \
+              "📋 **Каталог:** Переглянути всі категорії виробів\n" + \
+              "🛒 **Замовлення:** Два варіанти:\n" + \
+              "   • Швидке замовлення конкретного виробу\n" + \
+              "   • Індивідуальне замовлення під ваші параметри\n\n" + \
+              "💬 **Питання:** Просто напишіть що вас цікавить, і я допоможу!\n\n" + \
+              "📱 **Контакти:** /contact для зв'язку з майстром"
+    await update.message.reply_text(response, parse_mode="Markdown")
 
 
 async def handle_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
@@ -273,6 +330,22 @@ async def debug_all_updates(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     else:
         log.info(f"🔍 [DEBUG] OTHER UPDATE TYPE")
 
+async def setup_bot_commands(app: Application):
+    """Встановити команди меню для бота."""
+    commands = [
+        BotCommand("start", "🏠 Головна сторінка"),
+        BotCommand("catalog", "📋 Показати каталог виробів"),
+        BotCommand("order", "📝 Індивідуальне замовлення"),
+        BotCommand("contact", "📱 Контакти майстерні"),
+        BotCommand("help", "❓ Допомога")
+    ]
+    
+    try:
+        await app.bot.set_my_commands(commands)
+        log.info(f"✅ Встановлено {len(commands)} команд меню")
+    except Exception as e:
+        log.error(f"❌ Помилка встановлення команд меню: {e}")
+
 def setup_handlers(app: Application):
     # Import admin handlers
     from bot.admin import create_admin_handlers
@@ -285,6 +358,9 @@ def setup_handlers(app: Application):
     
     # ✅ Regular handlers BEFORE admin (нижчий пріоритет групи)
     app.add_handler(CommandHandler("start", cmd_start), group=1)
+    app.add_handler(CommandHandler("catalog", cmd_catalog), group=1)
+    app.add_handler(CommandHandler("contact", cmd_contact), group=1)  
+    app.add_handler(CommandHandler("help", cmd_help), group=1)
     app.add_handler(CallbackQueryHandler(handle_callback_query), group=1)
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message), group=1)
     app.add_handler(build_order_handler(), group=1)  
@@ -294,3 +370,6 @@ def setup_handlers(app: Application):
         app.add_handler(handler, group=2)
     
     log.info("Handlers: regular (group=1) + admin (group=2) + debug (group=-1)")
+    
+    # Встановлюємо команди меню після створення app  
+    app.post_init = setup_bot_commands
