@@ -73,6 +73,8 @@ def analyze_message_context(message: str, history: list) -> dict:
             context["previous_context"] = "pricing_discussion"
         elif "замовлення" in last_messages.lower():
             context["previous_context"] = "order_process"
+        elif any(word in last_messages.lower() for word in ["плетіння", "тризуб", "бісмарк", "якір", "рамзес", "снейк", "кардинал"]):
+            context["previous_context"] = "weaving_discussion"
     
     return context
 
@@ -122,9 +124,24 @@ async def ask_ai(user_id: int, message: str, history: list) -> str:
         
         # 🎯 Context-aware prompt enhancement
         enhanced_message = message
+        context_hints = []
+        
+        # Додати поточний контекст
         if context["type"] != "general":
-            context_hint = f"\n\n[КОНТЕКСТ: Запит категорії '{context['category']}', тип '{context['type']}', пріоритет {context['priority']}]"
-            enhanced_message = message + context_hint
+            context_hints.append(f"Запит категорії '{context['category']}', тип '{context['type']}', пріоритет {context['priority']}")
+        
+        # Додати попередній контекст
+        if context["previous_context"]:
+            if context["previous_context"] == "weaving_discussion":
+                context_hints.append("ПОПЕРЕДНІЙ КОНТЕКСТ: розмова про плетіння ланцюжків/браслетів")
+            elif context["previous_context"] == "pricing_discussion":  
+                context_hints.append("ПОПЕРЕДНІЙ КОНТЕКСТ: обговорення цін")
+            elif context["previous_context"] == "order_process":
+                context_hints.append("ПОПЕРЕДНІЙ КОНТЕКСТ: процес оформлення замовлення")
+        
+        # Додати context hints до повідомлення
+        if context_hints:
+            enhanced_message = message + f"\n\n[КОНТЕКСТ: {'; '.join(context_hints)}]"
         
         messages = optimized_history + [{"role": "user", "content": enhanced_message}]
         

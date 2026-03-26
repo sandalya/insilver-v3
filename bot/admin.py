@@ -16,6 +16,11 @@ from core.log_analyzer import (
     find_lost_trainer_data, auto_recover_lost_data, get_unconfirmed_records,
     confirm_record, reject_record
 )
+from bot.admin_orders import (
+    cmd_orders, handle_orders_callback, handle_order_edit, handle_search_order,
+    handle_status_change, handle_set_status, handle_price_change, handle_delete_order,
+    handle_no_contact
+)
 
 log = logging.getLogger("bot.admin")
 
@@ -1975,7 +1980,17 @@ def create_admin_handlers():
     
     return [
         CommandHandler("admin", admin_panel),
+        CommandHandler("orders", cmd_orders),
         CallbackQueryHandler(handle_admin_callback, pattern="^(admin_|trainer_|knowledge_|recovery_|unconfirmed_)"),
+        CallbackQueryHandler(handle_orders_callback, pattern="^orders:"),
+        CallbackQueryHandler(handle_orders_callback, pattern="^orders_full:"),
+        CallbackQueryHandler(handle_orders_callback, pattern="^search_order:"),
+        CallbackQueryHandler(handle_order_edit, pattern="^order_edit:"),
+        CallbackQueryHandler(handle_status_change, pattern="^status:"),
+        CallbackQueryHandler(handle_set_status, pattern="^set_status:"),
+        CallbackQueryHandler(handle_price_change, pattern="^price:"),
+        CallbackQueryHandler(handle_delete_order, pattern="^delete:"),
+        CallbackQueryHandler(handle_no_contact, pattern="^no_contact:"),
         # ✅ ВИПРАВЛЕНО: Тільки для admin чату + context-aware
         MessageHandler(
             filters.TEXT & filters.User(ADMIN_IDS) & filters.Regex(r"^(edit_|trainer_|admin_)"),

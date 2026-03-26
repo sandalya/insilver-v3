@@ -349,7 +349,7 @@ def setup_handlers(app: Application):
     # ✅ ORDER HANDLER FIRST - має перехоплювати conversations перед загальним handler
     app.add_handler(build_order_handler(), group=1)
     
-    # Callback handlers з specific patterns
+    # Callback handlers з specific patterns (НЕ include order_full - воно в conversation handler)  
     app.add_handler(CallbackQueryHandler(handle_callback_query, pattern="^(contact_master|show_catalog)$"), group=1)
     
     # General message handler LAST - щоб не перехоплював conversation messages

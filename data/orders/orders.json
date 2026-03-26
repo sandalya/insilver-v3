@@ -311,5 +311,41 @@
     "delivery": "Нова Пошта",
     "created_at": "2026-03-25T23:04:14.461740",
     "name": "іаві524"
+  },
+  {
+    "type": "ланцюжок",
+    "weaving": "Рамзес",
+    "length": "50см",
+    "weight": "76",
+    "plating": "⚪️ Срібло біле",
+    "clasp": "🔗 Карабін",
+    "note": "➖ Немає",
+    "contact": "34536535",
+    "comment": "✍️ Є коментар",
+    "id": "555D48EA",
+    "tg_id": 189793675,
+    "tg_username": "gamaiunchik",
+    "tg_name": "Alex",
+    "delivery": "Нова Пошта",
+    "created_at": "2026-03-26T12:50:11.709956",
+    "name": "34536535"
+  },
+  {
+    "type": "ланцюжок",
+    "weaving": "Рамзес",
+    "length": "50см",
+    "weight": "333",
+    "plating": "⚪️ Срібло біле",
+    "clasp": "📦 Коробочка 600грн",
+    "note": "✍️ Гравіювання 500-700грн",
+    "contact": "a242424",
+    "comment": "✍️ Є коментар",
+    "id": "08BE63F5",
+    "tg_id": 189793675,
+    "tg_username": "gamaiunchik",
+    "tg_name": "Alex",
+    "delivery": "Нова Пошта",
+    "created_at": "2026-03-26T12:54:16.612766",
+    "name": "a242424"
   }
 ]
