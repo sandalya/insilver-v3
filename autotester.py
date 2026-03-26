@@ -809,6 +809,76 @@ print(f'OK:training_integration:{len(data)}')
         self.log(f"📄 Звіт збережено: {filepath}")
         return filepath
 
+    def save_baseline(self, filepath: str = None) -> str:
+        """Зберегти поточний стан успішних тестів як baseline"""
+        if not filepath:
+            filepath = "tests/baseline_results.json"
+        
+        # Підрахуємо загальні показники
+        total_passed = 0
+        total_failed = 0
+        for category in self.results.values():
+            total_passed += category.get('passed', 0)
+            total_failed += category.get('failed', 0)
+        
+        baseline_data = {
+            "timestamp": datetime.now().isoformat(),
+            "total_passed": total_passed,
+            "total_failed": total_failed,
+            "results_by_category": self.results,
+            "version_info": {
+                "python": sys.version,
+                "timestamp": datetime.now().isoformat()
+            }
+        }
+        
+        os.makedirs(os.path.dirname(filepath) if os.path.dirname(filepath) else "tests", exist_ok=True)
+        with open(filepath, 'w', encoding='utf-8') as f:
+            json.dump(baseline_data, f, indent=2, ensure_ascii=False)
+        
+        return filepath
+
+    def check_regression(self, baseline_file: str = "tests/baseline_results.json") -> list:
+        """Перевірити регресію порівняно з baseline"""
+        if not os.path.exists(baseline_file):
+            return ["Baseline файл не знайдено - запустіть --save-baseline"]
+        
+        try:
+            with open(baseline_file, 'r', encoding='utf-8') as f:
+                baseline = json.load(f)
+        except:
+            return ["Не вдалося прочитати baseline файл"]
+        
+        issues = []
+        
+        # Підрахуємо поточні показники
+        current_passed = 0
+        current_failed = 0
+        for category in self.results.values():
+            current_passed += category.get('passed', 0)
+            current_failed += category.get('failed', 0)
+        
+        baseline_passed = baseline.get("total_passed", 0)
+        baseline_failed = baseline.get("total_failed", 0)
+        
+        if current_passed < baseline_passed:
+            issues.append(f"Менше пройдених тестів: {current_passed} vs {baseline_passed}")
+        
+        if current_failed > baseline_failed:
+            issues.append(f"Більше проваленних тестів: {current_failed} vs {baseline_failed}")
+        
+        # Перевірка по категоріях
+        baseline_categories = baseline.get("results_by_category", {})
+        for category, current_data in self.results.items():
+            if category in baseline_categories:
+                baseline_data = baseline_categories[category]
+                if current_data.get('passed', 0) < baseline_data.get('passed', 0):
+                    issues.append(f"Категорія '{category}': менше пройдених тестів")
+                if current_data.get('failed', 0) > baseline_data.get('failed', 0):
+                    issues.append(f"Категорія '{category}': більше проваленних тестів")
+        
+        return issues
+
 
 # ─────────────────────────────────────────────────────────────────
 # CLI
@@ -830,6 +900,10 @@ def main():
                         help='Зберегти JSON звіт у файл')
     parser.add_argument('--quiet',       action='store_true',
                         help='Мінімум виводу')
+    parser.add_argument('--save-baseline', action='store_true',
+                        help='Зберегти успішні тести як baseline для regression testing')
+    parser.add_argument('--check-regression', action='store_true',  
+                        help='Перевірити регресію порівняно з збереженим baseline')
 
     args = parser.parse_args()
 
@@ -846,6 +920,19 @@ def main():
 
     tester  = AutoTester(verbose=verbose)
     success = tester.run_tests(max_level=max_level, fail_fast=fail_fast)
+
+    # Regression testing
+    if args.save_baseline and success:
+        tester.save_baseline()
+        print("✅ Baseline збережено для regression testing")
+    elif args.check_regression:
+        regression_issues = tester.check_regression()
+        if regression_issues:
+            print(f"⚠️  Знайдено {len(regression_issues)} регресій:")
+            for issue in regression_issues:
+                print(f"   - {issue}")
+        else:
+            print("✅ Регресій не знайдено")
 
     # Зберігаємо звіт
     if args.save_report:

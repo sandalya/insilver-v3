@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/home/sashok/.openclaw/workspace/insilver-v3/venv/bin/python3
 """
 🎭 UI Workflow Tester - Level 8 E2E Testing
 Тестує реальні user workflows без Telegram API
@@ -146,29 +146,62 @@ class InSilverWorkflowTester:
         """Test /start command functionality"""
         print("🧪 Testing /start command logic...")
         
-        # Import and test start command logic
         try:
             from bot.client import cmd_start
             
-            # Create mock update object
-            mock_update = type('MockUpdate', (), {
-                'effective_user': type('MockUser', (), {
-                    'id': self.mock_user_id,
-                    'username': self.mock_username,
-                    'first_name': 'UI Tester'
-                })(),
-                'message': type('MockMessage', (), {
-                    'reply_text': lambda text, reply_markup=None: print(f"🤖 Response: {text[:50]}...")
-                })()
-            })()
+            # Create proper mock objects that match Telegram API
+            mock_response = {"text": "", "called": False, "reply_markup": None}
             
-            # Test the function
-            # await cmd_start(mock_update, None)
+            class MockMessage:
+                async def reply_text(self, text, reply_markup=None):
+                    mock_response["text"] = text
+                    mock_response["reply_markup"] = reply_markup
+                    mock_response["called"] = True
+                    print(f"🤖 Mock Response: {text[:100]}...")
+                    
+            class MockUser:
+                def __init__(self):
+                    self.id = self.mock_user_id if hasattr(self, 'mock_user_id') else 999999999
+                    self.username = "ui_tester"
+                    self.first_name = "UI Tester"
+            
+            class MockUpdate:
+                def __init__(self):
+                    self.effective_user = MockUser()
+                    self.message = MockMessage()
+                    
+            # Test the actual function
+            mock_update = MockUpdate()
+            await cmd_start(mock_update, None)
+            
+            # Validate response
+            if not mock_response["called"]:
+                return {
+                    "status": "failed",
+                    "message": "Start command didn't call reply_text",
+                    "details": "No response generated"
+                }
+                
+            response_text = mock_response["text"]
+            if not response_text or len(response_text) < 20:
+                return {
+                    "status": "failed", 
+                    "message": "Start command response too short",
+                    "details": f"Response: '{response_text}'"
+                }
+                
+            # Check for key Ukrainian phrases
+            if "Вітаємо" not in response_text or "InSilver" not in response_text:
+                return {
+                    "status": "failed",
+                    "message": "Start command missing key content",
+                    "details": f"Expected 'Вітаємо' and 'InSilver' in: {response_text[:100]}"
+                }
             
             return {
                 "status": "passed",
-                "message": "Start command logic accessible",
-                "details": "Function imported successfully"
+                "message": "Start command working correctly",
+                "details": f"Response: {len(response_text)} chars, with keyboard: {mock_response['reply_markup'] is not None}"
             }
             
         except Exception as e:

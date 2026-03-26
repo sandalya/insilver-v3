@@ -1,6 +1,6 @@
 {
-  "test_session": "ui_test_1774471692",
-  "timestamp": 1774471698.404607,
+  "test_session": "ui_test_1774512528",
+  "timestamp": 1774512534.075794,
   "total_scenarios": 4,
   "passed_scenarios": 4,
   "failed_scenarios": 0,
@@ -23,7 +23,7 @@
         {
           "step": "start_command",
           "status": "passed",
-          "message": "Start command logic accessible"
+          "message": "Start command working correctly"
         },
         {
           "step": "product_search",
@@ -42,7 +42,7 @@
         }
       ],
       "errors": [],
-      "duration": 2.4312188625335693
+      "duration": 2.461838960647583
     },
     {
       "name": "file_system_testing",
