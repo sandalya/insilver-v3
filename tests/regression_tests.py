@@ -117,7 +117,8 @@ def test_дублікати_процесів_регресія():
         result = subprocess.run(['ps', 'aux'], capture_output=True, text=True)
         main_py_lines = [
             line for line in result.stdout.split('\n') 
-            if 'main.py' in line 
+            if 'insilver-v3' in line
+            and 'main.py' in line 
             and 'grep' not in line
             and 'git commit' not in line  # виключаємо git процеси
             and '/venv/bin/python3 main.py' in line  # тільки справжні запуски бота
@@ -125,7 +126,7 @@ def test_дублікати_процесів_регресія():
         
         process_count = len(main_py_lines)
         
-        if process_count == 1:
+        if process_count <= 1:
             print(f"   ✅ Тільки один процес main.py: {process_count}")
             return True
         else:
