@@ -1,9 +1,24 @@
 """AI модуль — спілкування з Anthropic."""
 import logging
+import sys
+import os
 import anthropic
 import time
 from core.config import ANTHROPIC_KEY
 from core.prompt import ENHANCED_SYSTEM_PROMPT
+
+# Shared token tracker
+sys.path.insert(0, os.path.expanduser("~/.openclaw/workspace"))
+try:
+    from shared.token_tracker import TokenTracker
+    _tracker = TokenTracker(
+        log_path=os.path.expanduser("~/.openclaw/workspace/insilver-v3/logs/token_log.jsonl"),
+        agent="insilver",
+        model="haiku",
+    )
+except Exception as _e:
+    logging.getLogger("core.ai").warning(f"token_tracker не підключено: {_e}")
+    _tracker = None
 
 log = logging.getLogger("core.ai")
 
@@ -156,7 +171,10 @@ async def ask_ai(user_id: int, message: str, history: list) -> str:
 
         reply = response.content[0].text
         duration = time.time() - start_time
-        
+
+        if _tracker:
+            _tracker.track(response.usage)
+
         log.info(f"AI відповів для {user_id} за {duration:.2f}с: {reply[:80]}...")
         return reply
 
