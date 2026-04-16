@@ -11,6 +11,7 @@ from core.catalog import search_catalog, format_item_text
 from core.health import health_checker
 from core.conversation_logger import log_user_message, log_bot_response, log_order_action, log_error_interaction
 from bot.order import build_order_handler
+from core.router import classify_intent
 
 log = logging.getLogger("bot.client")
 
@@ -186,61 +187,79 @@ async def handle_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 
         await ctx.bot.send_chat_action(update.effective_chat.id, "typing")
 
-        # Search catalog with error handling
-        try:
-            items, found = search_catalog(text)
-        except Exception as e:
-            log.error(f"Помилка пошуку в каталозі: {e}")
-            log_error_interaction(user.id, username, f"Catalog search error: {e}", text[:50])
-            items, found = [], False
-
         # Логування повідомлення користувача
-        log_user_message(user.id, username, text, len(items) if found else 0)
+        log_user_message(user.id, username, text)
+
+        # Smart Router — класифікуємо намір
+        intent = classify_intent(text)
 
         response = ""
         ai_time = 0
         has_photos = False
 
-        if found:
-            log.info(f"Каталог: знайдено {len(items)} товарів для '{text[:40]}'")
+        if intent == "SEARCH":
             try:
-                items_desc = "\n\n".join(format_item_text(i) for i in items)
-                augmented = (
-                    f"Клієнт питає: {text}\n\n"
-                    f"Знайдено в каталозі {len(items)} варіанти:\n{items_desc}\n\n"
-                    f"Коротко представ ці товари (1-2 речення), скажи що зараз покажеш фото. "
-                    f"Не вигадуй деталей яких немає."
-                )
-                
-                start_time = time.time()
-                response = await ask_ai(user.id, augmented, ctx.user_data.get("history", []))
-                ai_time = time.time() - start_time
-                has_photos = True
-                
-                await update.message.reply_text(response, parse_mode="Markdown")
-                
-                # Send photos with error recovery
-                photos_sent = 0
-                for item in items:
-                    try:
-                        await ctx.bot.send_chat_action(update.effective_chat.id, "upload_photo")
-                        await send_item_with_photo(update, item)
-                        photos_sent += 1
-                    except Exception as e:
-                        log.error(f"Помилка відправки фото для товару {item.get('title', 'N/A')}: {e}")
-                        log_error_interaction(user.id, username, f"Photo send error: {e}", item.get('title', 'N/A'))
-                        # Continue with other items
-                        
-                log.info(f"Надіслано фото: {photos_sent}/{len(items)}")
-                
+                items, found = search_catalog(text)
             except Exception as e:
-                log.error(f"Помилка обробки знайденних товарів: {e}")
-                log_error_interaction(user.id, username, f"Items processing error: {e}", text[:50])
-                response = "Вибачте, виникла проблема з обробкою результатів пошуку. Спробуйте ще раз."
-                ai_time = 0
+                log.error(f"Помилка пошуку в каталозі: {e}")
+                log_error_interaction(user.id, username, f"Catalog search error: {e}", text[:50])
+                items, found = [], False
+
+            if found:
+                log.info(f"SEARCH: знайдено {len(items)} для '{text[:40]}'")
+                try:
+                    items_desc = "\n\n".join(format_item_text(i) for i in items)
+                    augmented = (
+                        f"Клієнт питає: {text}\n\n"
+                        f"Знайдено в каталозі {len(items)} варіанти:\n{items_desc}\n\n"
+                        f"Коротко представ ці товари (1-2 речення), скажи що зараз покажеш фото. "
+                        f"Не вигадуй деталей яких немає."
+                    )
+                    start_time = time.time()
+                    response = await ask_ai(user.id, augmented, ctx.user_data.get("history", []))
+                    ai_time = time.time() - start_time
+                    has_photos = True
+                    await update.message.reply_text(response, parse_mode="Markdown")
+                    photos_sent = 0
+                    for item in items:
+                        try:
+                            await ctx.bot.send_chat_action(update.effective_chat.id, "upload_photo")
+                            await send_item_with_photo(update, item)
+                            photos_sent += 1
+                        except Exception as e:
+                            log.error(f"Помилка відправки фото {item.get('title', 'N/A')}: {e}")
+                    log.info(f"Надіслано фото: {photos_sent}/{len(items)}")
+                except Exception as e:
+                    log.error(f"Помилка обробки товарів: {e}")
+                    log_error_interaction(user.id, username, f"Items processing error: {e}", text[:50])
+                    response = "Вибачте, виникла проблема з обробкою результатів пошуку. Спробуйте ще раз."
+                    await update.message.reply_text(response)
+            else:
+                log.info(f"SEARCH але каталог порожній для '{text[:40]}' — fallback до AI")
+                try:
+                    start_time = time.time()
+                    response = await ask_ai(user.id, text, ctx.user_data.get("history", []))
+                    ai_time = time.time() - start_time
+                    await update.message.reply_text(response, parse_mode="Markdown")
+                except Exception as e:
+                    log.error(f"Помилка AI: {e}")
+                    response = "Вибачте, зараз не можу обробити запит. Спробуйте ще раз."
+                    await update.message.reply_text(response)
+
+        elif intent == "SOCIAL":
+            log.info(f"SOCIAL: '{text[:40]}'")
+            try:
+                start_time = time.time()
+                response = await ask_ai(user.id, text, ctx.user_data.get("history", []))
+                ai_time = time.time() - start_time
+                await update.message.reply_text(response, parse_mode="Markdown")
+            except Exception as e:
+                log.error(f"Помилка AI (SOCIAL): {e}")
+                response = "Дякую! Звертайтесь 😊"
                 await update.message.reply_text(response)
+
         else:
-            log.info(f"Каталог: нічого не знайдено для '{text[:40]}'")
+            log.info(f"{intent}: '{text[:40]}'")
             try:
                 start_time = time.time()
                 response = await ask_ai(user.id, text, ctx.user_data.get("history", []))
