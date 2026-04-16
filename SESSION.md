@@ -1,17 +1,13 @@
-# SESSION — 2026-04-16
+# SESSION — 2026-04-16 20:48
+
 ## Проект
 insilver-v3
-## Що зробили
-Рефакторинг за планом Opus:
-- Фаза 0: чистка 46 файлів (-8542 рядків сміття)
-- Фаза 1: Smart Router SEARCH/QUESTION/ORDER/SOCIAL
-- Фаза 2: оптимізація промпту (36 Q&A -> 15)
-- Фаза 3: admin.py 2003 -> 279 рядків
-- Фаза 4: debug cleanup, telegram WARNING level
-## Наступний крок
-Запустити Ed QA, перевірити покращення якості відповідей
-## Контекст
-Router працює: SOCIAL не показує каталог, SEARCH показує. Admin спрощений.
 
-## Беклог
-- [ ] Перевести на стандартизовану 3-рівневу пам'ять (in-context + session summary + user profile) — уніфікувати з Sam/Garcia архітектурою. Доречно після того як Ed QA підтвердить стабільність поточного рефакторингу.
+## Що зробили
+Рефакторинг: cleanup, smart router, prompt opt, admin 2003->279, debug cleanup
+
+## Наступний крок
+Ed QA re-run, показати /admin Владу
+
+## Контекст
+Router SEARCH/QUESTION/ORDER/SOCIAL працює. 3-рівнева пам'ять у беклозі.
