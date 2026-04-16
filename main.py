@@ -30,8 +30,8 @@ logging.basicConfig(
 logging.getLogger("bot.client").setLevel(logging.INFO)
 
 # ✅ CLAUDE.AI: Enable telegram debug logging  
-logging.getLogger("telegram").setLevel(logging.DEBUG)
-logging.getLogger("telegram.ext").setLevel(logging.DEBUG)
+logging.getLogger("telegram").setLevel(logging.WARNING)
+logging.getLogger("telegram.ext").setLevel(logging.WARNING)
 
 log = logging.getLogger("main")
 

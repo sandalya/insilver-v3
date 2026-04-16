@@ -358,7 +358,9 @@ def setup_handlers(app: Application):
     app.add_error_handler(error_handler)
     
     # ✅ CLAUDE.AI: Debug handler ПЕРШИМ (group=-1)
-    app.add_handler(MessageHandler(filters.ALL, debug_all_updates), group=-1)
+    import os
+    if os.getenv("DEBUG") == "1":
+        app.add_handler(MessageHandler(filters.ALL, debug_all_updates), group=-1)
     
     # ✅ Regular handlers BEFORE admin (нижчий пріоритет групи)
     app.add_handler(CommandHandler("start", cmd_start), group=1)
