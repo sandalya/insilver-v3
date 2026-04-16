@@ -44,43 +44,31 @@ SYSTEM_PROMPT += """
 
 # Динамічна інтеграція training.json
 def get_enhanced_system_prompt():
-    """Отримати SYSTEM_PROMPT з інтегрованими знаннями з training.json"""
+    """15 найкоротших Q&A щоб не роздувати контекст."""
     import json
-    import os
     from pathlib import Path
-    
     enhanced_prompt = SYSTEM_PROMPT
-    
-    # Додати знання з training.json
     training_file = Path(__file__).parent.parent / "data" / "knowledge" / "training.json"
-    
     try:
         if training_file.exists():
-            with open(training_file, 'r', encoding='utf-8') as f:
-                training_data = json.load(f)
-            
-            if training_data:
-                knowledge_section = "\n\nТВОЯ БАЗА ЗНАНЬ (найчастіші питання клієнтів):\n"
-                knowledge_section += "=" * 60 + "\n"
-                
-                for i, record in enumerate(training_data[:36], 1):  # Всі записи з Enhanced Training
-                    question = record.get('title', '')
-                    answer = record['content'][0]['text'] if record.get('content') else ''
-                    
-                    # Додаємо в базу знань
-                    knowledge_section += f"{i}. ПИТАННЯ: {question}\n"
-                    knowledge_section += f"   ВІДПОВІДЬ: {answer[:200]}{'...' if len(answer) > 200 else ''}\n\n"
-                
-                knowledge_section += f"Всього записів у базі: {len(training_data)}\n"
-                knowledge_section += "Використовуй ці знання для відповідей клієнтам!\n"
-                knowledge_section += "=" * 60
-                
-                enhanced_prompt += knowledge_section
-                
-    except Exception as e:
-        # Якщо помилка завантаження - використовуємо базовий промпт
+            with open(training_file, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            if data:
+                qa_pairs = []
+                for record in data:
+                    title = record.get("title", "")
+                    content = record.get("content", [])
+                    answer = content[0].get("text", "") if content and isinstance(content, list) else ""
+                    if title and answer and len(answer) < 500:
+                        qa_pairs.append((title, answer[:200]))
+                if qa_pairs:
+                    selected = qa_pairs[:15]
+                    knowledge = "\n\nЧАСТІ ПИТАННЯ КЛІЄНТІВ:\n"
+                    for i, (q, a) in enumerate(selected, 1):
+                        knowledge += f"\nП: {q}\nВ: {a}\n"
+                    enhanced_prompt += knowledge
+    except Exception:
         pass
-    
     return enhanced_prompt
 
 # Експортуємо enhanced версію як основний промпт
