@@ -1,165 +1,26 @@
-# DEV_CHECKPOINT.md — 2026-04-13
+# DEV_CHECKPOINT — InSilver v3
 
-## 🧹 Cleanup (2026-04-13)
-- Видалено 21 мертвий файл: 5 старих main + 16 debug/test скриптів
-- Залишились: main.py, convert_knowledge.py, migrate_knowledge.py
-- Pre-commit hook активний (обходити --no-verify при видаленні файлів)
+Оновлено: 2026-04-16
 
----
+## Стан проекту
+- Сервіс: active (insilver-v3.service)
+- Бот: @insilver_v3_bot
 
+## Останні зміни
+- Без змін у коді
 
-## 🎯 ПОТОЧНИЙ СТАН
+## Знайдені баги (Ed QA 2026-04-16)
+- measurement_help_01: питання про розмір пальця → бот відповідає каталогом ланцюжків
+- thanks_short_01: "Дякую" → бот відповідає повним каталогом замість короткої відповіді  
+- russian_language_01: питають ціну → каталог без цін
+- Системна: занадто агресивний каталог у відповідях на нерелевантні питання
 
-**InSilver v3** — **PRODUCTION READY** з повноцінною infrastructure!
+## Наступні кроки
+1. Виправити системну проблему каталог-спаму в prompt.py
+2. Додати обробку "дякую" / завершення розмови
+3. Перевірити чому measurement питання ігнорується
 
-### ✅ АКТИВНІ СЕРВІСИ:
-```bash
-insilver-v3          ✅ active — головний бот консультант
-insilver-monitor     ✅ active — health monitoring + auto-restart
-```
-
-### ✅ СИСТЕМИ ГОТОВІ:
-- **Auto Testing** — 7-рівневий autotester (syntax → AI quality)
-- **Health & Stability** — monitor + auto-restart + Telegram alerts  
-- **Cost Control** — medium sensitivity warnings
-- **Documentation** — повна InSilver Docs для Влада
-
----
-
-## 🔥 СЬОГОДНІШНІ ДОСЯГНЕННЯ
-
-### 🧪 **Autotester v3** (повноцінне функціональне + бізнес тестування):
-- **7 рівнів тестування:** syntax → imports → basic → AI → performance → telegram → AI quality
-- **Level 7 AI Quality:** **31 реальний клієнтський сценарій** (4 партії скрінів)
-- **Business Coverage:** складні бізнес-процеси (лом, комбіновані замовлення, логістика)
-- **End-to-End Coverage:** повний цикл від каталогу до прийому в виготовлення
-- **Mock тестування:** без витрати токенів OpenAI (економія ~$5-10 щомісяця)
-- **CLI опції:** --level N, --full, --ci, --save-report, --no-fail-fast
-- **JSON звіти** + fail_fast логіка
-
-### 🔧 **Health & Stability система** (Claude.AI Prio 1):
-- **bot_manager.py** — systemctl wrapper (7 команд)
-- **monitor_bot.py** — health check + auto-restart + alerts
-- **insilver-monitor.service** — systemd сервіс  
-- **install_monitor.sh** — автоматичне встановлення
-
-### 💰 **Cost Awareness:**
-- Medium чутливість — попередження при >$0.50 операціях
-- Економія токенів через batch operations
-- Розумний checkpoint без авто /new
-
----
-
-## 🚀 ГОТОВІ ДО ВИКОРИСТАННЯ
-
-### **Testing:**
-```bash
-python3 autotester.py          # швидкі тести
-python3 autotester.py --full   # всі 5 рівнів
-python3 autotester.py --ci     # CI mode
-```
-
-### **Health Management:**
-```bash
-python3 tools/bot_manager.py status   # детальний статус
-python3 tools/bot_manager.py health   # швидкий health check  
-python3 tools/bot_manager.py follow   # live логи
-journalctl -u insilver-monitor -f     # monitor логи
-```
-
-### **Installation (для production):**
-```bash
-sudo bash tools/install_monitor.sh    # встановити monitor
-```
-
----
-
-## 📊 ROADMAP STATUS
-
-### ✅ ЗАВЕРШЕНО:
-- **🧠 ENHANCED AI TRAINING** — ПОВНІСТЮ ГОТОВО! (Prio 1)
-  - training.json: 15 → 36 записів (+140% knowledge)
-  - ENHANCED_SYSTEM_PROMPT: 1768 → 10717 символів  
-  - Context-aware responses в ai.py
-  - 88% coverage ключових фраз з 7 партій скрінів
-  - Smart категоризація: ціни/замовлення/лом/доставка/виміри
-- **Layer 1 Автотестування** — 7 рівнів готово (31 реальний сценарій)
-- **Layer 1 Health & Stability** — Claude.AI Prio 1 завершено  
-- **Cost optimization** — warnings система + mock testing економія
-
-### 🎭 **LEVEL 7 - РЕАЛЬНІ БІЗНЕС-ПРОЦЕСИ:**
-**31 сценарій з 4 партій скрінів:**
-- 💰 Ціни і розрахунки (тризуб, бісмарк, граненій якір)
-- 🔧 Технічні параметри + виміри  
-- 🎨 Персоналізація + покриття (родій, позолота)
-- 💸 Торгівля і знижки + прийом лому
-- 📋 End-to-end замовлення + логістика
-- ⏰ Тайминг бізнес-процесів + workflow оптимізація
-
-**16 high-priority тестів** — критичні user scenarios
-
-### 🔄 НАСТУПНЕ (за пріоритетом):
-- **Level 8: Full Integration** — system-wide E2E тестування (на розгляді)
-- **Vision AI System** — automated_vision_tester + beauty_score (Prio 2)
-- **Analytics** — analyze_logs.py для статистики роботи (Prio 3)
-
-### 🎯 МІНОР ФІКСИ:
-- Autotester import помилки (venv активація в тестах)
-- ALERT_CHAT_ID переключення на Влада коли треба
-
----
-
-## 🏗️ АРХІТЕКТУРА
-
-### **v3 Core:**
-```
-main.py → bot/ (client, admin, order) + core/ (ai, config, prompt, catalog, health)
-```
-
-### **Infrastructure (NEW):**
-```
-tools/
-├── bot_manager.py      — systemctl wrapper
-├── monitor_bot.py      — health check + alerts
-├── insilver-monitor.service — systemd сервіс  
-└── install_monitor.sh  — auto installer
-
-autotester.py          — 5-рівневе тестування
-```
-
-### **Systemd Services:**
-```
-insilver-v3.service    — головний бот (Restart=on-failure)
-insilver-monitor.service — health monitor (CHECK_INTERVAL=300)
-```
-
----
-
-## 💡 КЛЮЧОВІ LEARNINGS
-
-### **Claude.AI якість:**
-- Production-ready код з першого разу  
-- Ідеальна системd архітектура
-- Comprehensive error handling
-
-### **v2 → v3 підхід:**
-- PID управління → systemd services
-- Manual restart → systemctl integration
-- Single health check → dual monitoring
-
-### **Cost optimization:**
-- Batch operations економлять токени
-- Smart checkpoints продовжують context  
-- Medium warnings попереджають про витрати
-
----
-
-## ⏭️ NEXT SESSION PRIORITIES
-
-1. **Prio 2: Vision AI System** (beauty_score для Layer 2)
-2. **Autotester minor fixes** (venv import issues)  
-3. **Analytics system** (v2 analyze_logs migration)
-
-**СТАТУС: ГОТОВИЙ ДО PRODUCTION + НАСТУПНИХ ЕТАПІВ** 🚀
-
-*Останнє оновлення: 2026-03-25, сесія Claude.AI mega results*
+## Ed QA
+- Агент: ~/.openclaw/workspace/ed/
+- Бот: @edward_tester_bot
+- Остання оцінка: 2✅ 3⚠️ 7❌
