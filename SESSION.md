@@ -1,13 +1,13 @@
-# SESSION — 2026-04-16 20:48
+# SESSION — 2026-04-17 00:41
 
 ## Проект
 insilver-v3
 
 ## Що зробили
-Рефакторинг: cleanup, smart router, prompt opt, admin 2003->279, debug cleanup
+fix: Ukrainian-only prompt (заборона Отлично/Хорошо), empty message guard в client.py
 
 ## Наступний крок
-Ed QA re-run, показати /admin Владу
+розібратись чому empty_message_01 все ще FAIL (Ed крашить без збереження звіту), покращити injection_system_01
 
 ## Контекст
-Router SEARCH/QUESTION/ORDER/SOCIAL працює. 3-рівнева пам'ять у беклозі.
+Ed QA: було 2✅7❌ → стало 7✅2❌; два FAIL залишились: empty_message (бот мовчить на пробіл) і injection_system (ігнорує замість відхилення)

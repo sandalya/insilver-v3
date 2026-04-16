@@ -174,6 +174,9 @@ async def handle_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     try:
         user = update.effective_user
         text = update.message.text
+        if not text or not text.strip():
+            await update.message.reply_text("Напишіть ваше питання або побажання щодо виробу 🙂")
+            return
         username = user.username or user.first_name or "anonymous"
         
         log.info(f"MSG від {user.id}: {text[:80]}")
