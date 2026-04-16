@@ -1,14 +1,14 @@
-# SESSION — 2026-04-09
-
+# SESSION — 2026-04-16
 ## Проект
-insilver-v3 (ІнСільвер)
-
+insilver-v3
 ## Що зробили
-Бот стабільний. Autotester 5 рівнів. Health monitor як окремий systemd сервіс. Міграція v2→v3 завершена.
-
+Рефакторинг за планом Opus:
+- Фаза 0: чистка 46 файлів (-8542 рядків сміття)
+- Фаза 1: Smart Router SEARCH/QUESTION/ORDER/SOCIAL
+- Фаза 2: оптимізація промпту (36 Q&A -> 15)
+- Фаза 3: admin.py 2003 -> 279 рядків
+- Фаза 4: debug cleanup, telegram WARNING level
 ## Наступний крок
-Prio 2: Vision AI System — automated_vision_tester + beauty_score. Також пофіксувати регресійний тест (хибно рахує всі main.py як дублікати).
-
+Запустити Ed QA, перевірити покращення якості відповідей
 ## Контекст
-systemd: insilver-v3 + insilver-monitor | клієнт: Влад
-autotester level 3+ потребує venv для запуску
+Router працює: SOCIAL не показує каталог, SEARCH показує. Admin спрощений.

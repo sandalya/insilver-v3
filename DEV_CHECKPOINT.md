@@ -1,26 +1,36 @@
 # DEV_CHECKPOINT — InSilver v3
-
 Оновлено: 2026-04-16
 
 ## Стан проекту
 - Сервіс: active (insilver-v3.service)
 - Бот: @insilver_v3_bot
+- Модель: claude-haiku-4-5-20251001
 
-## Останні зміни
-- Без змін у коді
+## Архітектура
+- Smart Router (core/router.py) — класифікує intent через Haiku
+- 4 інтенти: SEARCH / QUESTION / ORDER / SOCIAL
+- Каталог показується ТІЛЬКИ для SEARCH intent
+- Admin: /admin + /orders (спрощений, 279 рядків)
 
-## Знайдені баги (Ed QA 2026-04-16)
-- measurement_help_01: питання про розмір пальця → бот відповідає каталогом ланцюжків
-- thanks_short_01: "Дякую" → бот відповідає повним каталогом замість короткої відповіді  
-- russian_language_01: питають ціну → каталог без цін
-- Системна: занадто агресивний каталог у відповідях на нерелевантні питання
+## Файли
+- main.py — точка входу
+- bot/client.py — обробка повідомлень + router
+- bot/order.py — форма замовлення
+- bot/admin.py — адмін панель (спрощена)
+- bot/admin_orders.py — управління замовленнями
+- core/ai.py — Anthropic API
+- core/router.py — intent classification
+- core/catalog.py — пошук в каталозі
+- core/prompt.py — системний промпт + 15 Q&A з training.json
+- core/config.py — конфігурація
+- core/health.py — health checker
+- core/conversation_logger.py — логування розмов
+- core/lock.py — single process lock
+- core/order_config.py — конфіг анкети замовлення
+- core/order_context.py — автозаповнення з історії
+- core/photo.py — робота з фото
 
 ## Наступні кроки
-1. Виправити системну проблему каталог-спаму в prompt.py
-2. Додати обробку "дякую" / завершення розмови
-3. Перевірити чому measurement питання ігнорується
-
-## Ed QA
-- Агент: ~/.openclaw/workspace/ed/
-- Бот: @edward_tester_bot
-- Остання оцінка: 2✅ 3⚠️ 7❌
+1. Запустити Ed QA і перевірити покращення (ціль: 8+ з 12)
+2. Підключити Влада — показати /admin і /orders
+3. Розглянути: RAG замість плоского training в промпті
