@@ -10,8 +10,9 @@ from core.order_context import has_order_intent
 from core.catalog import search_catalog, format_item_text
 from core.health import health_checker
 from core.conversation_logger import log_user_message, log_bot_response, log_order_action, log_error_interaction
-from bot.order import build_order_handler
+from bot.order import build_order_handler, build_new_order_handler
 from core.router import classify_intent
+from datetime import datetime
 
 log = logging.getLogger("bot.client")
 
@@ -172,6 +173,9 @@ async def cmd_help(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 async def handle_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     """Handle regular text messages with comprehensive error handling."""
     try:
+        from core.handoff import is_paused
+        if is_paused(update.effective_chat.id):
+            return
         user = update.effective_user
         text = update.message.text
         if not text or not text.strip():
@@ -192,6 +196,54 @@ async def handle_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 
         # Логування повідомлення користувача
         log_user_message(user.id, username, text)
+
+        # Keyword detection — handoff
+        text_lower = text.lower()
+        found_human = [t for t in HUMAN_TRIGGERS if t in text_lower]
+        if found_human:
+            await update.message.reply_text(
+                "Передаю діалог майстру, він скоро підключиться! 🙏"
+            )
+            username_str = f"@{user.username}" if user.username else user.first_name
+            for admin_id in ADMIN_IDS:
+                try:
+                    await ctx.bot.send_message(admin_id,
+                        f"🔔 КЛІЄНТ ПРОСИТЬ ЛЮДИНУ\n\n"
+                        f"👤 {user.first_name} ({username_str})\n"
+                        f"💬 «{text}»",
+                        reply_markup=InlineKeyboardMarkup([[
+                            InlineKeyboardButton("🤖 Повернути бота", callback_data=f"resume_{update.effective_chat.id}")
+                        ]])
+                    )
+                except Exception as e:
+                    log.error(f"Handoff notify error: {e}")
+            from core.handoff import pause_bot
+            pause_bot(update.effective_chat.id, reason=f"human: {', '.join(found_human)}")
+            return
+
+        found_complex = [kw for kw in COMPLEX_KEYWORDS if kw in text_lower]
+        if found_complex:
+            await update.message.reply_text(
+                "Для таких виробів потрібна точна консультація майстра. "
+                "Передаю йому ваш запит — він скоро зв'яжеться з вами! 🙏"
+            )
+            username_str = f"@{user.username}" if user.username else user.first_name
+            for admin_id in ADMIN_IDS:
+                try:
+                    await ctx.bot.send_message(admin_id,
+                        f"🔔 СКЛАДНИЙ ВИРІБ\n\n"
+                        f"👤 {user.first_name} ({username_str})\n"
+                        f"💬 «{text}»\n"
+                        f"🏷️ Ключові слова: {', '.join(found_complex)}",
+                        reply_markup=InlineKeyboardMarkup([[
+                            InlineKeyboardButton("🤖 Повернути бота", callback_data=f"resume_{update.effective_chat.id}")
+                        ]])
+                    )
+                except Exception as e:
+                    log.error(f"Handoff notify error: {e}")
+            from core.handoff import pause_bot
+            pause_bot(update.effective_chat.id, reason=f"complex: {', '.join(found_complex)}")
+            return
 
         # Smart Router — класифікуємо намір
         intent = classify_intent(text)
@@ -353,6 +405,81 @@ async def setup_bot_commands(app: Application):
     except Exception as e:
         log.error(f"❌ Помилка встановлення команд меню: {e}")
 
+
+COMPLEX_KEYWORDS = [
+    "каблучка", "каблучку", "каблучки", "кільце", "кольцо", "перстень", "печатка", "печатку",
+    "хрестик", "крестик", "хрест", "хрестики",
+    "кулон", "підвіска", "підвіску", "медальйон",
+    "комплект", "набір"
+]
+
+HUMAN_TRIGGERS = [
+    "людина", "людину", "менеджер", "менеджера", "майстер", "майстра",
+    "позвати когось", "живий оператор", "оператор", "человек", "мастер"
+]
+
+
+async def handle_photo(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    from core.handoff import pause_bot
+    user = update.effective_user
+    chat_id = update.effective_chat.id
+
+    photo = update.message.photo[-1] if update.message.photo else None
+    doc = update.message.document if not photo else None
+    file_obj = photo or doc
+    if not file_obj:
+        return
+
+    tg_file = await file_obj.get_file()
+    save_dir = Path("data/photos/incoming")
+    save_dir.mkdir(parents=True, exist_ok=True)
+    filename = f"{user.id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.jpg"
+    filepath = save_dir / filename
+    await tg_file.download_to_drive(str(filepath))
+
+    await update.message.reply_text(
+        "Дякую за фото! 📸 Передав його майстру для точної оцінки. "
+        "Хвилинку, він скоро відповість."
+    )
+
+    username = f"@{user.username}" if user.username else user.first_name
+    caption = (
+        f"📸 ФОТО ВІД КЛІЄНТА\n\n"
+        f"👤 {user.first_name} ({username})\n"
+        f"💬 {update.message.caption or 'без підпису'}"
+    )
+    for admin_id in ADMIN_IDS:
+        try:
+            await ctx.bot.send_photo(admin_id, file_obj.file_id, caption=caption)
+            await ctx.bot.send_message(admin_id,
+                f"Бот поставлено на паузу для цього клієнта.\n"
+                f"Зв\'яжіться з клієнтом напряму, потім поверніть бота:",
+                reply_markup=InlineKeyboardMarkup([[
+                    InlineKeyboardButton("🤖 Повернути бота", callback_data=f"resume_{chat_id}")
+                ]])
+            )
+        except Exception as e:
+            log.error(f"Не вдалось сповістити адміна {admin_id}: {e}")
+
+    pause_bot(chat_id, reason="photo")
+    log.info(f"HANDOFF (photo): user {user.id}, chat paused")
+
+
+async def handle_resume(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    from core.handoff import resume_bot
+    query = update.callback_query
+    if query.from_user.id not in ADMIN_IDS:
+        await query.answer("Тільки для адміна")
+        return
+    chat_id = int(query.data.split("_", 1)[1])
+    resume_bot(chat_id)
+    await query.answer("Бот повернено!")
+    await query.message.edit_text(
+        query.message.text + "\n\n✅ Бот повернено в роботу"
+    )
+    log.info(f"RESUME: chat {chat_id} by admin {query.from_user.id}")
+
+
 def setup_handlers(app: Application):
     # Import admin handlers
     from bot.admin import create_admin_handlers
@@ -371,9 +498,12 @@ def setup_handlers(app: Application):
     app.add_handler(CommandHandler("contact", cmd_contact), group=1)  
     app.add_handler(CommandHandler("help", cmd_help), group=1)
     # ✅ ORDER HANDLER FIRST - має перехоплювати conversations перед загальним handler
+    app.add_handler(build_new_order_handler(), group=1)
     app.add_handler(build_order_handler(), group=1)
     
     # Callback handlers з specific patterns (НЕ include order_full - воно в conversation handler)  
+    app.add_handler(CallbackQueryHandler(handle_resume, pattern=r"^resume_"), group=1)
+    app.add_handler(MessageHandler(filters.PHOTO | filters.Document.IMAGE, handle_photo), group=1)
     app.add_handler(CallbackQueryHandler(handle_callback_query, pattern="^(contact_master|show_catalog)$"), group=1)
     
     # General message handler LAST - щоб не перехоплював conversation messages
