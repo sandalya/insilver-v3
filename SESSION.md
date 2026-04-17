@@ -1,13 +1,13 @@
-# SESSION — 2026-04-17 00:41
+# SESSION — 2026-04-17 19:43
 
 ## Проект
 insilver-v3
 
 ## Що зробили
-fix: Ukrainian-only prompt (заборона Отлично/Хорошо), empty message guard в client.py
+MVP done: prompt guardrails+multilang, order funnel nb_*, pricing.py, summary #YYYYMMDD-HHMM, photo+handoff (pause/resume)
 
 ## Наступний крок
-розібратись чому empty_message_01 все ще FAIL (Ed крашить без збереження звіту), покращити injection_system_01
+Влад має написати /start боту щоб отримувати сповіщення; Ed handoff тести потребують reset між кейсами — вирішити після прокачки Ed; перевірити faq_quality після фіксу промпту
 
 ## Контекст
-Ed QA: було 2✅7❌ → стало 7✅2❌; два FAIL залишились: empty_message (бот мовчить на пробіл) і injection_system (ігнорує замість відхилення)
+Воронка nb_*: type→weaving→length→weight→coating→lock→name→phone→city→summary→confirm. Handoff: HUMAN_TRIGGERS+COMPLEX_KEYWORDS→pause, resume_ callback. Ціни: weaving_prices в pricing.json. ADMIN_IDS=[сашко, влад], Влад ще не писав /start боту.
