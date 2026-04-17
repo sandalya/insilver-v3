@@ -271,8 +271,32 @@ async def b_handle_button(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         current_step = steps[order["_step_idx"]]
         options = current_step.get("options", [])
         if opt_idx < len(options):
-            order["_filled"][step_key] = options[opt_idx]
-            order[step_key] = options[opt_idx]
+            chosen = options[opt_idx]
+
+            # "Інше" — просимо текстовий ввід
+            if chosen in ("✏️ Інше", "Інше"):
+                order["_waiting_custom"] = step_key
+                await update.callback_query.message.reply_text(
+                    "Введіть свій варіант:",
+                    reply_markup=InlineKeyboardMarkup([[
+                        InlineKeyboardButton("❌ Скасувати", callback_data="f:cancel")
+                    ]])
+                )
+                return B_STEP
+
+            # "Є коментар" — просимо текст коментаря
+            if step_key == "comment" and chosen == "✍️ Є коментар":
+                order["_waiting_custom"] = "comment"
+                await update.callback_query.message.reply_text(
+                    "Напишіть ваш коментар:",
+                    reply_markup=InlineKeyboardMarkup([[
+                        InlineKeyboardButton("❌ Скасувати", callback_data="f:cancel")
+                    ]])
+                )
+                return B_STEP
+
+            order["_filled"][step_key] = chosen
+            order[step_key] = chosen
 
         order["_step_idx"] += 1
         result = await b_send_step(update, ctx)
@@ -287,6 +311,19 @@ async def b_handle_text(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     if "order" not in ctx.user_data:
         return ConversationHandler.END
     order = ctx.user_data["order"]
+    value = update.message.text.strip()
+
+    # Чекаємо кастомний ввід після "Інше" або "Є коментар"
+    if order.get("_waiting_custom"):
+        step_key = order.pop("_waiting_custom")
+        order["_filled"][step_key] = value
+        order[step_key] = value
+        order["_step_idx"] += 1
+        result = await b_send_step(update, ctx)
+        if result == -1:
+            return result
+        return B_STEP
+
     steps = order["_steps"]
     idx = order["_step_idx"]
 
@@ -296,7 +333,6 @@ async def b_handle_text(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 
     step = steps[idx]
     step_key = step["key"]
-    value = update.message.text.strip()
 
     order["_filled"][step_key] = value
     order[step_key] = value

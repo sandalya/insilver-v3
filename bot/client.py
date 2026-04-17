@@ -85,6 +85,11 @@ async def send_item_with_photo(update: Update, item: dict):
     await update.message.reply_text(caption, parse_mode="Markdown", reply_markup=keyboard)
 
 
+async def cmd_cancel(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    """Скасування поточної дії — для Ed QA та клієнтів."""
+    ctx.user_data.clear()
+    await update.message.reply_text("Скасовано. Чим можу допомогти? 😊")
+
 async def cmd_start(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     name = user.first_name or "друже"
@@ -407,10 +412,9 @@ async def setup_bot_commands(app: Application):
 
 
 COMPLEX_KEYWORDS = [
-    "каблучка", "каблучку", "каблучки", "кільце", "кольцо", "перстень", "печатка", "печатку",
-    "хрестик", "крестик", "хрест", "хрестики",
-    "кулон", "підвіска", "підвіску", "медальйон",
-    "комплект", "набір"
+    "індивідуальний дизайн", "унікальний дизайн", "своє ескіз", "свій ескіз",
+    "гравіювання", "гравіровка", "гравірування",
+    "весільн", "корпоративн", "оптом", "партія"
 ]
 
 HUMAN_TRIGGERS = [
@@ -493,13 +497,14 @@ def setup_handlers(app: Application):
         app.add_handler(MessageHandler(filters.ALL, debug_all_updates), group=-1)
     
     # ✅ Regular handlers BEFORE admin (нижчий пріоритет групи)
+    app.add_handler(CommandHandler("cancel", cmd_cancel), group=1)
     app.add_handler(CommandHandler("start", cmd_start), group=1)
     app.add_handler(CommandHandler("catalog", cmd_catalog), group=1)
     app.add_handler(CommandHandler("contact", cmd_contact), group=1)  
     app.add_handler(CommandHandler("help", cmd_help), group=1)
     # ✅ ORDER HANDLER FIRST - має перехоплювати conversations перед загальним handler
-    app.add_handler(build_new_order_handler(), group=1)
     app.add_handler(build_order_handler(), group=1)
+    app.add_handler(build_new_order_handler(), group=1)
     
     # Callback handlers з specific patterns (НЕ include order_full - воно в conversation handler)  
     app.add_handler(CallbackQueryHandler(handle_resume, pattern=r"^resume_"), group=1)
