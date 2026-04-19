@@ -8,7 +8,6 @@ import traceback
 import asyncio
 from telegram.ext import Application
 from telegram import BotCommand
-from core.lock import acquire_lock, release_lock
 from core.config import BOT_TOKEN, LOGS_DIR
 from core.health import health_checker
 from bot.client import setup_handlers
@@ -42,8 +41,6 @@ def global_exception_handler(exc_type, exc_value, exc_traceback):
         return
     
     log.critical("💥 Критична помилка:", exc_info=(exc_type, exc_value, exc_traceback))
-    release_lock()
-
 async def simple_error_handler(update: object, context):
     """Simple error handler like minimal bot"""
     error = context.error
@@ -65,7 +62,6 @@ def main():
         sys.exit(1)
     
     try:
-        acquire_lock()
         log.info("🚀 InSilver v3 CLAUDE-FIXED стартує...")
         
         # ✅ Application з правильними timeouts (фікс для Pi5)
@@ -114,7 +110,5 @@ def main():
         raise
     finally:
         log.info("🔄 Завершуємо роботу...")
-        release_lock()
-
 if __name__ == "__main__":
     main()
