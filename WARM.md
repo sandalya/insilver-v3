@@ -1,9 +1,19 @@
 ---
 project: insilver-v3
-updated: 2026-04-20
+updated: 2026-04-21
 ---
 
 # WARM — InSilver v3
+## 🚨 ПРАВИЛО: Ed first для тестів
+
+```yaml
+last_touched: 2026-04-21
+tags: [testing, workflow, critical]
+status: active
+```
+
+**Будь-який функціональний тест бота — через Ed, НЕ руками.** Якщо у `ed/suites/data/insilver/blocks/` немає потрібного кейсу — спочатку оцінити час на додання. ≤30 хв → додати в Ed і прогнати. >30 хв → попередити і запропонувати ручний тест як виняток. Не застосовувати тільки для інфраструктурних перевірок (systemd, файли, shell).
+
 
 ## Архітектура — Smart Router
 
