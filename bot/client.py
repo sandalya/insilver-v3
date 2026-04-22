@@ -504,7 +504,6 @@ def setup_handlers(app: Application):
     app.add_handler(CommandHandler("help", cmd_help), group=1)
     # ✅ ORDER HANDLER FIRST - має перехоплювати conversations перед загальним handler
     app.add_handler(build_order_handler(), group=1)
-    app.add_handler(build_new_order_handler(), group=1)
     
     # Callback handlers з specific patterns (НЕ include order_full - воно в conversation handler)  
     app.add_handler(CallbackQueryHandler(handle_resume, pattern=r"^resume_"), group=1)
