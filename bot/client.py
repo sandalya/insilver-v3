@@ -453,17 +453,29 @@ async def handle_photo(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         f"💬 {update.message.caption or 'без підпису'}"
     )
     for admin_id in ADMIN_IDS:
-        try:
-            await ctx.bot.send_photo(admin_id, file_obj.file_id, caption=caption)
-            await ctx.bot.send_message(admin_id,
+        async def _notify(aid):
+            await ctx.bot.send_photo(aid, file_obj.file_id, caption=caption)
+            await ctx.bot.send_message(aid,
                 f"Бот поставлено на паузу для цього клієнта.\n"
                 f"Зв\'яжіться з клієнтом напряму, потім поверніть бота:",
                 reply_markup=InlineKeyboardMarkup([[
                     InlineKeyboardButton("🤖 Повернути бота", callback_data=f"resume_{chat_id}")
                 ]])
             )
+        try:
+            await _notify(admin_id)
         except Exception as e:
-            log.error(f"Не вдалось сповістити адміна {admin_id}: {e}")
+            msg = str(e)
+            if "Chat not found" in msg or "chat not found" in msg.lower():
+                log.warning(f"Admin {admin_id} peer not in cache, warming up...")
+                try:
+                    await ctx.bot.send_chat_action(admin_id, "typing")
+                    await _notify(admin_id)
+                    log.info(f"Admin {admin_id} notified after warmup")
+                except Exception as e2:
+                    log.error(f"Admin {admin_id} unreachable after warmup: {e2}")
+            else:
+                log.error(f"Не вдалось сповістити адміна {admin_id}: {e}")
 
     pause_bot(chat_id, reason="photo")
     log.info(f"HANDOFF (photo): user {user.id}, chat paused")
