@@ -28,7 +28,7 @@ ORDERS_FILE = Path("data/orders/orders.json")
 # Режим A
 A_NAME, A_PHONE, A_CITY, A_COMMENT = range(4)
 # Режим B — нові кроки воронки
-B_TYPE, B_STEP = range(4, 6)
+B_TYPE, B_STEP, B_CONFIRM = range(4, 7)
 # Нова лінійна воронка
 B_PRODUCT_TYPE, B_WEAVING, B_LENGTH, B_WEIGHT, B_COATING, B_LOCK, B_NAME, B_PHONE, B_CITY, B_SUMMARY = range(6, 16)
 
@@ -349,26 +349,68 @@ async def b_handle_text(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 # ════════════════════════════════════════════════════════════════════════════════
 
 async def finish_order(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    """Показує summary замовлення з ціною і кнопками Підтвердити/Скасувати.
+    Повертає B_CONFIRM щоб далі обробити вибір в b_handle_confirm."""
+    from core.pricing import calculate_price, format_price
+    order = ctx.user_data.get("order", {})
+    product_type = (order.get("type") or "").lower()
+    lines = ["📋 *Перевірте замовлення:*\n"]
+    field_labels = {
+        "weaving": "Плетіння", "length": "Довжина", "weight": "Маса",
+        "coating": "Покриття", "lock": "Застібка", "extra": "Додатково",
+        "cross_type": "Тип хреста", "collection": "Колекція", "motif": "Мотив",
+        "size": "Розмір", "style": "Стиль", "composition": "Склад",
+        "contact": "Контакт", "comment": "Коментар",
+    }
+    lines.append(f"  • Тип: {product_type}")
+    for key, label in field_labels.items():
+        val = order.get(key)
+        if val:
+            lines.append(f"  • {label}: {val}")
+    price_types = {"ланцюжок", "браслет", "хрестик", "кулон", "печатка"}
+    weight_raw = order.get("weight", "")
+    try:
+        weight = float(str(weight_raw).replace(",", ".").replace("г", "").strip())
+    except (ValueError, AttributeError):
+        weight = 0.0
+    if product_type in price_types and weight > 0:
+        weaving = order.get("weaving", "")
+        if product_type in {"хрестик", "кулон", "печатка"}:
+            weaving = product_type.capitalize()
+        lock_name = order.get("lock", "") or ""
+        lock_clean = "".join(c for c in lock_name if c.isalpha() or c.isspace()).strip()
+        calc = calculate_price(weight, lock_clean, weaving)
+        lines.append("")
+        lines.append(format_price(calc))
+        lines.append("\n_Ціна орієнтовна, остаточну уточнить майстер._")
+    else:
+        lines.append("")
+        lines.append("💰 Орієнтовну вартість уточнить майстер.")
+    text = "\n".join(lines)
+    kb = InlineKeyboardMarkup([[
+        InlineKeyboardButton("✅ Підтвердити", callback_data="f:confirm"),
+        InlineKeyboardButton("❌ Скасувати", callback_data="f:cancel"),
+    ]])
+    msg = update.callback_query.message if update.callback_query else update.message
+    await msg.reply_text(text, parse_mode="Markdown", reply_markup=kb)
+    return B_CONFIRM
+
+
+async def _save_and_notify(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     order = ctx.user_data.get("order", {})
     user = update.effective_user
-
     order["id"] = str(uuid.uuid4())[:8].upper()
     order["tg_id"] = user.id
     order["tg_username"] = user.username or ""
     order["tg_name"] = user.first_name or ""
     order["delivery"] = "Нова Пошта"
     order["created_at"] = datetime.now().isoformat()
-
-    for k in ["_mode", "_prefilled", "_steps", "_step_idx", "_filled"]:
+    for k in ["_mode", "_prefilled", "_steps", "_step_idx", "_filled", "_waiting_custom"]:
         order.pop(k, None)
-
-    # Витягуємо ім'я з контакту якщо є
     if order.get("contact") and not order.get("name"):
         order["name"] = order["contact"]
-
     save_order(order)
     log.info(f"Замовлення #{order['id']} від {user.id}")
-
     msg = update.callback_query.message if update.callback_query else update.message
     await msg.reply_text(
         f"✅ Замовлення *#{order['id']}* прийнято!\n\n"
@@ -376,10 +418,20 @@ async def finish_order(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         parse_mode="Markdown",
         reply_markup=ReplyKeyboardRemove()
     )
-
     await notify_owner(ctx, order, user)
     ctx.user_data.pop("order", None)
     return ConversationHandler.END
+
+
+async def b_handle_confirm(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    data = query.data
+    if data == "f:confirm":
+        return await _save_and_notify(update, ctx)
+    if data == "f:cancel":
+        return await cancel_order(update, ctx)
+    return B_CONFIRM
 
 
 async def cancel_order(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
@@ -763,6 +815,9 @@ def build_order_handler() -> ConversationHandler:
             B_STEP: [
                 CallbackQueryHandler(b_handle_button, pattern=r"^f:"),
                 MessageHandler(filters.TEXT & ~filters.COMMAND, b_handle_text),
+            ],
+            B_CONFIRM: [
+                CallbackQueryHandler(b_handle_confirm, pattern=r"^f:(confirm|cancel)$"),
             ],
         },
         fallbacks=[
