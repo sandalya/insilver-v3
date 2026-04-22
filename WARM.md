@@ -1,13 +1,14 @@
 ---
 project: insilver-v3
-updated: 2026-04-21
+updated: 2026-04-22
 ---
 
 # WARM — InSilver v3
+
 ## 🚨 ПРАВИЛО: Ed first для тестів
 
 ```yaml
-last_touched: 2026-04-21
+last_touched: 2026-04-22
 tags: [testing, workflow, critical]
 status: active
 ```
@@ -28,16 +29,16 @@ status: active
 ## Order funnel — дві системи
 
 ```yaml
-last_touched: 2026-04-17
+last_touched: 2026-04-22
 tags: [order, funnel, ui]
 status: active
 ```
 
-**Основна (стара, `build_order_handler`)** — зареєстрована ПЕРШОЮ в `setup_handlers`. `bot/order.py` + `core/order_config.py` + `core/order_context.py` (автозаповнення з історії). 8 типів виробів: ланцюжок, браслет, хрестик, кулон, обручка, перстень, набір, інше. Кожен тип має свої кроки (напр. ланцюжок: плетіння→довжина→маса→покриття→застібка→додатково→контакт→коментар). Кнопки "⬅️ Назад" і "❌ Скасувати" на кожному кроці. `_waiting_custom` для обробки "✏️ Інше" — бот просить текстовий ввід.
+**Основна (стара, `build_order_handler`)** — зареєстрована ПЕРШОЮ в `setup_handlers`. `bot/order.py` + `core/order_config.py` + `core/order_context.py` (автозаповнення з історії). 8 типів виробів: ланцюжок, браслет, хрестик, кулон, обручка, перстень, набір, інше. Кожен тип має свої кроки (напр. ланцюжок: плетіння→довжина→маса→покриття→застібка→додатково→контакт→коментар→**Summary+Confirm**). Кнопки "⬅️ Назад" і "❌ Скасувати" на кожному кроці. `_waiting_custom` для обробки "✏️ Інше" — бот просить текстовий ввід. **Summary+Confirm крок готовий** (сесія 22.04).
 
 **Нова (nb_*, `build_new_order_handler`)** — зареєстрована ДРУГОЮ (запасна). Тільки ланцюжок/браслет. Має калькулятор і summary перед підтвердженням.
 
-**Відомі баги:** кнопка "Інше" не запитує текстовий ввід (баг у `_waiting_custom`). Стара воронка створює замовлення без попереднього summary.
+**Баги (низький пріоритет):** Ed race state leak, comment_flow текст, happy_path пусте фінальне повідомлення — в беклозі.
 
 ## Prompt і guardrails
 
@@ -52,12 +53,12 @@ status: done
 ## Handoff (human escalation)
 
 ```yaml
-last_touched: 2026-04-17
+last_touched: 2026-04-22
 tags: [handoff, admin]
 status: done
 ```
 
-`core/handoff.py` — pause/resume. `handle_photo` — фото → адміну + пауза. `handle_resume` — callback для адміна. Ed тести `09_handoff` — green. Між Ed-блоками треба скидати `data/handoff_state.json` → `{}`, інакше бот мовчить.
+`core/handoff.py` — pause/resume. `handle_photo` — фото → адміну + пауза. `handle_resume` — callback для адміна. Ed тести `09_handoff` — green. Handoff warmup протестовано (сесія 22.04). Між Ed-блоками треба скидати `data/handoff_state.json` → `{}`, інакше бот мовчить.
 
 ## Keyword detection (складні вироби)
 
@@ -72,12 +73,12 @@ status: planned
 ## Калькулятор
 
 ```yaml
-last_touched: 2026-04-16
+last_touched: 2026-04-22
 tags: [pricing, calculator]
 status: done
 ```
 
-`core/pricing.py` з `calculate_price()`, `format_price()`, `get_price_per_gram()`. `data/pricing.json` — ціни. Працює в новій воронці (nb_*).
+`core/pricing.py` з `calculate_price()`, `format_price()`, `get_price_per_gram()`. `data/pricing.json` — ціни. Працює в новій воронці (nb_*). **Pricing підтверджено Владом** (сесія 22.04). Готово до демо.
 
 ## Каталог і пошук
 
@@ -92,12 +93,12 @@ status: active
 ## Admin панель
 
 ```yaml
-last_touched: 2026-04-16
+last_touched: 2026-04-22
 tags: [admin, ui]
-status: active
+status: ready_for_demo
 ```
 
-`bot/admin.py` — адмін панель (спрощена, 279 рядків). `bot/admin_orders.py` — управління замовленнями. Команди: `/admin`, `/orders`. Ще не показано Владу.
+`bot/admin.py` — адмін панель (спрощена, 279 рядків). `bot/admin_orders.py` — управління замовленнями. Команди: `/admin`, `/orders`. **Готово до демо Владу** (сесія 22.04).
 
 ## Photo handling
 
@@ -122,18 +123,18 @@ status: active
 ## Ed QA integration
 
 ```yaml
-last_touched: 2026-04-17
+last_touched: 2026-04-22
 tags: [testing, ed, qa]
 status: active
 ```
 
 Ed QA agent (`workspace/ed/`). Target: `@insilver_v3_bot`. Запуск: `cd ~/.openclaw/workspace/ed && source venv/bin/activate && python3 main.py run --bot insilver --block <BLOCK> --transport telegram --judge haiku`. Тест-кейси: `ed/suites/data/insilver/blocks/`. Рубрики: `ed/judge/rubrics/insilver.py`.
 
-Блоки: `01_smoke`, `07_prompt_guardrails` (✅ green), `09_handoff` (✅ green), `10_order_funnel` (❌ intent cache баг, кнопка Інше баг). Два типи тестів: одиночні і multi-step з кнопками (`click_intent` — часткове співпадіння тексту, emoji ігноруються).
+Блоки: `01_smoke`, `07_prompt_guardrails` (✅ green), `09_handoff` (✅ green), `10_order_funnel` (✅ побудова блоку завершена, matcher layered match готовий, assertions розширені). Два типи тестів: одиночні і multi-step з кнопками (`click_intent` — часткове співпадіння тексту, emoji ігноруються).
 
 **⚠️ Між блоками скидати handoff:** `echo '{}' > data/handoff_state.json && sudo systemctl restart insilver-v3 && sleep 3`
 
-**Відомий баг:** Ed intent cache дає хибні результати між запусками. Funnel: після Ланцюжок→плетіння Ed плутає Бісмарк.
+**Беклог race-баги:** race state leak, comment_flow текст, happy_path пусте повідомлення — низький пріоритет, не блокує релізу.
 
 ## Інфраструктура
 
@@ -148,16 +149,17 @@ status: active
 ## Roadmap (з implementation guide v003)
 
 ```yaml
-last_touched: 2026-04-20
+last_touched: 2026-04-22
 tags: [roadmap, planning]
 status: active
 ```
 
-**Задача 1** — Пофіксити Ed тести для воронки (`10_order_funnel`): intent cache, кнопка Інше. ← ПОТОЧНА
-**Задача 2** — Перевірити keyword detection в `client.py` (складні вироби).
-**Задача 3** — Повна регресія Ed (ціль: всі блоки зелені).
-**Задача 4** — Summary в стару воронку (опціонально, не блокує).
-**Далі:** pricing від Влада, показати Владу /admin і /orders, RAG замість плоского training.
+**Задачи 1-6 з v004 закриті** (крім дрібних race-багів Ed в беклозі)
+
+**Поточні пріоритети (після 22.04):**
+1. **Демо Владу** — /admin, /orders, pricing (на цьому тижні?)
+2. **Беклог:** Ed race state leak, comment_flow текст, happy_path (низький пріоритет)
+3. **Потім:** keyword detection перевірка, RAG замість training.json, повна регресія Ed
 
 ## Layout проекту
 
