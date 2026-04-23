@@ -16,3 +16,4 @@ __pycache__/
 # PID
 bot.pid
 venv/
+data/orders/orders.json

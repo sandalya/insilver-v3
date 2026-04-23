@@ -302,7 +302,7 @@ async def b_handle_button(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         result = await b_send_step(update, ctx)
         if result == -1:
             return result
-        return B_STEP
+        return result if result else B_STEP
 
     return B_STEP
 
@@ -322,7 +322,7 @@ async def b_handle_text(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         result = await b_send_step(update, ctx)
         if result == -1:
             return result
-        return B_STEP
+        return result if result else B_STEP
 
     steps = order["_steps"]
     idx = order["_step_idx"]
@@ -397,6 +397,18 @@ async def finish_order(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 
 
 async def _save_and_notify(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    try:
+        return await _save_and_notify_impl(update, ctx)
+    except Exception as e:
+        import traceback
+        log.error(f"_save_and_notify FAILED: {e}\n{traceback.format_exc()}")
+        msg = update.callback_query.message if update.callback_query else update.message
+        await msg.reply_text("⚠️ Помилка збереження замовлення. Спробуйте ще раз або напишіть майстру напряму.")
+        ctx.user_data.pop("order", None)
+        return ConversationHandler.END
+
+
+async def _save_and_notify_impl(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     order = ctx.user_data.get("order", {})
     user = update.effective_user
     order["id"] = str(uuid.uuid4())[:8].upper()
