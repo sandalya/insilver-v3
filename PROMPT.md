@@ -1,13 +1,13 @@
 Проект: insilver-v3
 
-Всі 5 обов'язкових задач v004 закрито: allow_reentry=True у воронці, safe_admin_send helper, 4 нотифікації адміна, httpx-логи закриті. Ed: 4 PASS + 1 WARN. Технічний чекліст 5/5 ✅, bot production-ready.
+Поточний стан: v004 закрита, бот production-ready по функціоналу. Реалізовано COMPLEX_KEYWORDS захист, /price 150 команда, адмін-картка з НП, order_id fix, кнопка Як заміряти (браслет), видалення попередніх повідомлень, safe_admin_send + 4 точки нотифікацій. Ed 10_order_funnel: 4 PASS + 1 WARN. Коміти: 541d98d + c58ed72.
 
-Цьому сеансі:
-1. Доробити ADMIN_GUIDE.md і USER_GUIDE.md (~330+154 рядків → причесати)
-2. Ультімейт-тест зі скрінів Влада (як клієнт)
-3. Отримати від Влада фінальний pricing.json
-4. Показати Владу /admin і /orders
+Що далі:
+1. Доробити ADMIN_GUIDE.md + USER_GUIDE.md (фінальне причісування)
+2. Отримати від Влада pricing.json + фото ланцюжка для Як заміряти
+3. Ультімейт-тест зі скрінів Влада як клієнт
+4. Демо: /admin, /orders, функціонал
 
-Блокерів немає, граматика дозволяє releasу. Pre-commit hook у BACKLOG (--no-verify). Залишилась опціональна Задача 6 (Summary у старій воронці).
+Блокери: pre-commit hook зламаний → всі коміти --no-verify (у BACKLOG).
 
-Проділи: HOT.md, WARM.md для контексту.
+📎 Поділись HOT.md + WARM.md для контексту.

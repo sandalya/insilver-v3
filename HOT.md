@@ -7,7 +7,7 @@ updated: 2026-04-25
 
 ## Now
 
-Сесія 25.04 завершена. v004 закрита (5/5 обов'язкових задач). Бот production-ready по функціоналу: 8 типів виробів, складні слова (комплект/каблучка/перстень/вушко) → handoff, /price 150 ✅, кнопка 📏 Як заміряти (браслет: hand_measure_1.jpg + hand_measure_2.jpg), адмін-картка з фото НП (order_id: #YYYYMMDD-HHMM uuid fix), Markdown-краш фікс (b_send_step + notify_owner). Ed 10_order_funnel: 4 PASS + 1 WARN + 1 FAIL (метадані). Коміти: 541d98d (фічі), c58ed72 (фікси). Всі коміти --no-verify (pre-commit hook у BACKLOG).
+Сесія 25.04 завершена. v004 закрита (5/5 обов'язкових задач). Бот production-ready по функціоналу: 8 типів виробів, складні слова (комплект/каблучка/перстень/вушко) → handoff, /price 150 ✅, кнопка 📏 Як заміряти (браслет: hand_measure_1.jpg + hand_measure_2.jpg), адмін-картка з фото НП (order_id: #YYYYMMDD-HHMM uuid fix), Markdown-краш фікс (b_send_step + notify_owner). Ed 10_order_funnel: 4 PASS + 1 WARN + 1 FAIL (метадані). Коміти: 541d98d (фічі), c58ed72 (фікси), 79773a1 (Path import). Всі коміти --no-verify (pre-commit hook у BACKLOG).
 
 ## Last done
 
@@ -26,6 +26,7 @@ updated: 2026-04-25
 - ✅ /price NoneType захист
 - ✅ Smoke end-to-end воронка
 - ✅ Ed 10_order_funnel: 4 PASS + 1 WARN + 1 FAIL (метадані)
+- ✅ Глобальний імпорт Path у client.py (handle_photo падав)
 
 ## Next
 
@@ -39,7 +40,7 @@ updated: 2026-04-25
 ## Blockers
 
 - **pre-commit hook:** зламаний (3 посилання на файли тестів, 2 не існують) → у BACKLOG, всі коміти `--no-verify`
-- **order_id неконсистентність:** стара воронка #20260425-1405 (без #), нова #20260425-1405 — не блокує критично
+- **order_id неконсистентність:** стара воронка 20260425-1405 (без #), нова #20260425-1405 — не блокує критично
 - **show_measure_button старої воронки:** тільки для браслета, для ланцюжка text-fallback HOW_TO_MEASURE
 
 ## Active branches
@@ -59,3 +60,4 @@ updated: 2026-04-25
 - Всі коміти: `git commit --no-verify`
 - Ed `reset_command` з `config/bots.yaml` робить reset автомат — ручні echo НЕ потрібні
 - prefilled з extract_order_context може потрапити у _filled — якщо проблеми зі спецсимволами, дивитись туди
+- show_measure_button у старій воронці тільки для браслета — для ланцюжка text-fallback HOW_TO_MEASURE
