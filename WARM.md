@@ -206,14 +206,42 @@ status: active
 ```yaml
 last_touched: 2026-04-25
 tags: [documentation, guides]
-status: in_progress
+status: complete
 ```
 
-**ADMIN_GUIDE.md** — для Влада. Вже є ~330 рядків, потребує дороблення і причісування.
+**ADMIN_GUIDE.md** — 382 рядки. Зміст: /admin, /orders, /price, /done flow, trainer 👁/✏️, адмін-картка з НП, HANDOFF, чекліст. **Готово.**
 
-**USER_GUIDE.md** — для кінцевих користувачів. Вже є ~154 рядків, потребує дороблення і причісування.
+**USER_GUIDE.md** — 224 рядки. Зміст: формальне 'ви', 8 типів виробів, HOW_TO_MEASURE, #YYYYMMDD-HHMM, Нова Пошта, /help, /order, /contact. **Готово.**
 
-Фіналізація — останній крок перед релізом (сесія 25.04).
+**PDF генерація:** pandoc + chromium headless (Pi5, сірий фон #f5f5f5, Noto Color Emoji). **Готово.**
+
+**bot/doc_sender.py:** split_by_h2 + md_to_telegram_v2 з bulletproof escape (placeholder loop handles nested code/bold/headers). **Готово.**
+
+**/help і /admin_help:** шлють .md секціями MarkdownV2. **Готово.**
+
+## Меню скрепки (inline commands)
+
+```yaml
+last_touched: 2026-04-25
+tags: [ui, commands, menu]
+status: complete
+```
+
+**5 команд для клієнта:** menu, help, order, contact, price
+
+**10 команд для адміна:** menu, admin, orders, done, price, help, admin_help, reset, restart, logs
+
+Реалізація: BotCommandScopeChat — різні меню для різних користувачів. Коміт: cc26a05 (feat). **Готово.**
+
+## /admin toggle
+
+```yaml
+last_touched: 2026-04-25
+tags: [admin, auth]
+status: complete
+```
+
+`/admin` став toggle (вхід/вихід). Runtime state зберігається в `data/admin_active.json`, скидається при старті. Silent-ignore guards на /orders, /price, /done, /admin_help для не-адмінів. Коміт: cc26a05 (feat). **Готово.**
 
 ## Roadmap (з implementation guide v003)
 
@@ -232,15 +260,16 @@ status: active
 - Задача 6 (Summary у старій воронці) — опціональна
 
 **Поточні пріоритети (релізна фаза):**
-1. **Документація:** ADMIN_GUIDE.md + USER_GUIDE.md (допилити)
-2. **Ультімейт-тест** — зі скрінів Влада як клієнт
-3. **Фінальний pricing.json** — від Влада
-4. **Демо Владу** — /admin, /orders, функціонал
+1. **Демо Владу** — /admin, /orders, /price, /done, /help, /admin_help, меню скрепки
+2. **Отримати від Влада:** фінальний pricing.json, фото для ланцюжка
+3. **Документація PDF:** ADMIN_GUIDE.pdf + USER_GUIDE.pdf готові
+4. **Ультімейт-тест** — зі скрінів Влада як клієнт
 5. **Релізна перевірка** — pre-commit hook у BACKLOG, технічний чекліст 5/5 ✅
 
 **Потім (postrelease):**
 - Задача 6 (опціональна)
 - RAG замість training.json (+ фото в training records)
+- /catalog видалити (BACKLOG)
 
 ## Layout проекту
 
@@ -256,8 +285,9 @@ insilver-v3/
 ├── bot/
 │   ├── client.py        — обробка повідомлень + router + /price + COMPLEX_KEYWORDS + Path import + trainer delegation
 │   ├── order.py         — форма замовлення (стара, основна, allow_reentry=True, видалення попередніх, show_measure_button)
-│   ├── admin.py         — адмін панель (safe_admin_send, CommandHandler, сесія 25.04)
-│   └── admin_orders.py  — управління замовленнями (CommandHandler)
+│   ├── admin.py         — адмін панель (safe_admin_send, CommandHandler, toggle, сесія 25.04)
+│   ├── admin_orders.py  — управління замовленнями (CommandHandler)
+│   └── doc_sender.py    — doc генерація й відправка (/help, /admin_help, PDF, сесія 25.04)
 ├── core/
 │   ├── ai.py            — Anthropic API
 │   ├── router.py        — intent classification
@@ -274,7 +304,7 @@ insilver-v3/
 │   ├── pricing.py       — калькулятор цін + /price команда
 │   ├── backup_system.py
 │   └── log_analyzer.py
-├── data/                — каталог, training.json (38 записів), pricing.json
+├── data/                — каталог, training.json (38 записів), pricing.json, docs/ (ADMIN_GUIDE.md, USER_GUIDE.md), admin_active.json
 ├── logs/
 ├── tests/               — Ed QA тести
 └── scripts/
