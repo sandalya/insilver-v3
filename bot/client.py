@@ -1,6 +1,7 @@
 """Обробник повідомлень від клієнтів."""
 import logging
 import time
+from pathlib import Path
 from telegram import Update, InputMediaPhoto, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, filters, ContextTypes
 from telegram import BotCommand
