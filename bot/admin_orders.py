@@ -24,11 +24,16 @@ def save_orders(orders):
         json.dump(orders, f, ensure_ascii=False, indent=2)
 
 async def cmd_orders(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    """Показати всі замовлення"""
+    """Показати всі замовлення. Підтримує виклик з /orders і з callback."""
+    if update.callback_query:
+        send = update.callback_query.message.reply_text
+    elif update.message:
+        send = update.message.reply_text
+    else:
+        return
     orders = load_orders()
-    
     if not orders:
-        await update.message.reply_text("📭 Немає замовлень")
+        await send("📭 Немає замовлень")
         return
     
     # Групуємо по статусам
@@ -40,12 +45,12 @@ async def cmd_orders(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         stats[status] += 1
     
     # Показуємо статистику
-    text = "📊 **ЗАМОВЛЕННЯ**\n\n"
+    text = "📊 ЗАМОВЛЕННЯ\n\n"
     for status, count in stats.items():
         emoji = {"new": "🆕", "processing": "⚙️", "ready": "✅", "completed": "🏁"}.get(status, "❓")
         text += f"{emoji} {status}: {count}\n"
     
-    text += f"\n📈 **Всього:** {len(orders)}"
+    text += f"\n📈 Всього: {len(orders)}"
     
     keyboard = InlineKeyboardMarkup([
         [InlineKeyboardButton("🆕 Нові", callback_data="orders:new")],
@@ -54,7 +59,7 @@ async def cmd_orders(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("📋 Всі", callback_data="orders:all")],
     ])
     
-    await update.message.reply_text(text, parse_mode="Markdown", reply_markup=keyboard)
+    await send(text, reply_markup=keyboard)
 
 async def handle_orders_callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     """Обробка callback для замовлень"""
@@ -213,15 +218,12 @@ async def handle_order_edit(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     # Кнопки дій
     keyboard = [
         [InlineKeyboardButton("📊 Змінити статус", callback_data=f"status:{order_id}")],
-        [InlineKeyboardButton("💰 Змінити ціну", callback_data=f"price:{order_id}")],
     ]
     
-    # Додаємо кнопку "Написати клієнту" тільки якщо є client_chat_id
-    client_id = order.get('client_chat_id')
+    # Кнопка "Написати клієнту" тільки якщо є tg_id; інакше нічого не показуємо
+    client_id = order.get('tg_id') or order.get('client_chat_id')
     if client_id and str(client_id).strip():
         keyboard.append([InlineKeyboardButton("💬 Написати клієнту", url=f"tg://user?id={client_id}")])
-    else:
-        keyboard.append([InlineKeyboardButton("❌ Немає контакту клієнта", callback_data=f"no_contact:{order_id}")])
     
     keyboard.extend([
         [InlineKeyboardButton("🗑️ Видалити", callback_data=f"delete:{order_id}")],
@@ -432,16 +434,53 @@ async def handle_set_status(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     )
 
 async def handle_price_change(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    """Зміна ціни замовлення - поки заглушка"""
+    """Зміна ціни замовлення — питає нову ціну текстом."""
     query = update.callback_query
-    await query.answer("Функція зміни ціни буде додана пізніше")
+    await query.answer()
+    order_id = query.data.split(":", 1)[1]
+    orders = load_orders()
+    order = next((o for o in orders if o.get("id") == order_id), None)
+    if not order:
+        await query.edit_message_text(f"❌ Замовлення #{order_id} не знайдено")
+        return
+    ctx.user_data["awaiting_price"] = order_id
+    current = ""
+    pc = order.get("price_calc")
+    if isinstance(pc, dict) and pc.get("total"):
+        current = f"\nПоточна: {pc['total']:.0f} грн"
+    await query.edit_message_text(
+        f"💰 Введіть нову ціну для #{order_id} (грн):{current}\n\nабо /cancel",
+        reply_markup=InlineKeyboardMarkup([[
+            InlineKeyboardButton("🔙 Назад", callback_data=f"order_edit:{order_id}")
+        ]])
+    )
+
 
 async def handle_delete_order(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    """Видалення замовлення - поки заглушка"""
+    """Видалення замовлення — спочатку підтвердження."""
     query = update.callback_query
-    await query.answer("Функція видалення буде додана пізніше")
+    await query.answer()
+    order_id = query.data.split(":", 1)[1]
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton("✅ Так, видалити", callback_data=f"delete_confirm:{order_id}")],
+        [InlineKeyboardButton("🔙 Скасувати", callback_data=f"order_edit:{order_id}")],
+    ])
+    await query.edit_message_text(
+        f"🗑 Точно видалити замовлення #{order_id}?\n\nЦю дію не можна скасувати.",
+        reply_markup=keyboard
+    )
 
-async def handle_no_contact(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    """Обробка кнопки 'Немає контакту клієнта'"""
+
+async def handle_delete_confirm(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    """Підтверджене видалення замовлення."""
     query = update.callback_query
-    await query.answer("Контакт клієнта недоступний або відсутній")
+    await query.answer()
+    order_id = query.data.split(":", 1)[1]
+    orders = load_orders()
+    before = len(orders)
+    orders = [o for o in orders if o.get("id") != order_id]
+    if len(orders) < before:
+        save_orders(orders)
+        await query.edit_message_text(f"✅ Замовлення #{order_id} видалено")
+    else:
+        await query.edit_message_text(f"❌ Замовлення #{order_id} не знайдено")

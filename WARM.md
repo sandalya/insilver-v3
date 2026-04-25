@@ -263,7 +263,7 @@ insilver-v3/
 │   ├── router.py        — intent classification
 │   ├── catalog.py       — пошук в каталозі
 │   ├── prompt.py        — системний промпт + guardrails (тільки text, не photo)
-│   ├── config.py        — конфігурація
+│   ├── config.py        — конфігурація (ORDERS_FILE як Path)
 │   ├── handoff.py       — human escalation (safe_admin_send, trainer delegation, сесія 25.04)
 │   ├── health.py        — health checker
 │   ├── conversation_logger.py

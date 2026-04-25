@@ -14,7 +14,8 @@ DATA_DIR = os.path.join(BASE_DIR, "data")
 LOGS_DIR = os.path.join(BASE_DIR, "logs")
 
 KNOWLEDGE_FILE = os.path.join(DATA_DIR, "knowledge", "knowledge.json")
-ORDERS_FILE = os.path.join(DATA_DIR, "orders", "orders.json")
+from pathlib import Path as _Path
+ORDERS_FILE = _Path(os.path.join(DATA_DIR, "orders", "orders.json"))
 PHOTOS_INDEX = os.path.join(DATA_DIR, "photos", "index.json")
 PHOTOS_CATALOG = os.path.join(DATA_DIR, "photos", "catalog.json")
 SILVER_FILE = os.path.join(DATA_DIR, "silver.json")

@@ -11,7 +11,7 @@ from core.conversation_logger import get_conversation_stats as get_stats
 from bot.admin_orders import (
     cmd_orders, handle_orders_callback, handle_order_edit, handle_search_order,
     handle_status_change, handle_set_status, handle_price_change, handle_delete_order,
-    handle_no_contact
+    handle_delete_confirm
 )
 
 log = logging.getLogger("bot.admin")
@@ -79,7 +79,37 @@ async def start_trainer_mode(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 
 
 async def handle_trainer_input(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    """Обробка вводу в режимі тренера."""
+    """Обробка вводу в режимі тренера або для зміни ціни замовлення."""
+    # Якщо адмін вводить нову ціну для замовлення
+    awaiting = ctx.user_data.get("awaiting_price")
+    if awaiting:
+        text = update.message.text.strip().replace(",", ".")
+        try:
+            new_price = float(text)
+        except ValueError:
+            await update.message.reply_text("❌ Невірне число. Спробуйте ще: напр. `1500`")
+            return
+        from bot.admin_orders import load_orders, save_orders
+        orders = load_orders()
+        order = next((o for o in orders if o.get("id") == awaiting), None)
+        if not order:
+            await update.message.reply_text(f"❌ Замовлення #{awaiting} не знайдено")
+            ctx.user_data.pop("awaiting_price", None)
+            return
+        # Оновити price_calc.total або просто custom_price
+        if isinstance(order.get("price_calc"), dict):
+            old = order["price_calc"].get("total", 0)
+            order["price_calc"]["total"] = new_price
+        else:
+            old = order.get("custom_price", 0)
+            order["custom_price"] = new_price
+        save_orders(orders)
+        ctx.user_data.pop("awaiting_price", None)
+        await update.message.reply_text(
+            f"✅ Ціна #{awaiting}: {old:.0f} → {new_price:.0f} грн"
+        )
+        return
+
     trainer = ctx.user_data.get("trainer")
     if not trainer:
         return
@@ -449,7 +479,13 @@ def create_admin_handlers():
         CommandHandler("price", cmd_price),
         CommandHandler("done", cmd_trainer_done),
         CallbackQueryHandler(handle_admin_callback, pattern="^(admin_|trainer_|kb_)"),
-        CallbackQueryHandler(handle_orders_callback, pattern="^(orders_|order_|set_status_|search_order|edit_order|delete_order|no_contact)"),
+        CallbackQueryHandler(handle_order_edit, pattern="^order_edit:"),
+        CallbackQueryHandler(handle_status_change, pattern="^status:"),
+        CallbackQueryHandler(handle_set_status, pattern="^set_status:"),
+        CallbackQueryHandler(handle_delete_order, pattern="^delete:"),
+        CallbackQueryHandler(handle_delete_confirm, pattern="^delete_confirm:"),
+        CallbackQueryHandler(handle_search_order, pattern="^search_order:"),
+        CallbackQueryHandler(handle_orders_callback, pattern="^(orders[:_]|orders_full:)"),
         MessageHandler(
             filters.TEXT & ~filters.COMMAND,
             handle_trainer_input

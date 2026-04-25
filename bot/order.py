@@ -23,7 +23,7 @@ from core.order_config import (
 )
 
 log = logging.getLogger("bot.order")
-ORDERS_FILE = Path("data/orders/orders.json")
+from core.config import ORDERS_FILE
 
 # ─── Стани ────────────────────────────────────────────────────────────────────
 # Режим A
@@ -38,6 +38,7 @@ B_PRODUCT_TYPE, B_WEAVING, B_LENGTH, B_WEIGHT, B_COATING, B_LOCK, B_NAME, B_PHON
 # ─── Збереження ───────────────────────────────────────────────────────────────
 
 def save_order(order: dict):
+    order.setdefault("status", "new")
     ORDERS_FILE.parent.mkdir(parents=True, exist_ok=True)
     orders = []
     if ORDERS_FILE.exists():

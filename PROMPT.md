@@ -1,14 +1,9 @@
 Проект: insilver-v3
 
-Стан: v004 закрита (5/5 обов'язкових задач), бот production-ready по функціоналу. Ed тести: 4 PASS + 1 WARN + 1 FAIL (метадані). 8 типів виробів, COMPLEX_KEYWORDS (комплект/каблучка/перстень/вушко → handoff), /price 150, адмін-картка з НП, order_id #YYYYMMDD-HHMM, кнопка 📏 Як заміряти для браслета, Markdown-фікси, glобальний Path import у client.py. Останні коміти: 541d98d, c58ed72, 79773a1 (всі --no-verify). Pre-commit hook зламаний → BACKLOG.
+**Стан:** v004 закрита (5/5 обов'язкових задач ✅). Бот production-ready по функціоналу. Адмінка допилена: /admin /orders CommandHandler'и, /done у trainer mode, view_knowledge з 👁 view + 🗑 del, kb_edit_<id> редагування, handle_trainer_photo graceful. Smoke all green. 38 записів у training.json.
 
-Далі: Допилити ADMIN_GUIDE.md + USER_GUIDE.md (330+154 рядків), отримати фінальний pricing.json від Влада, фото для ланцюжка, демо Владу (/admin, /orders). Опціональна Задача 6 (Summary у старій воронці).
+**Наступне:** ADMIN_GUIDE.md + USER_GUIDE.md (фінальна причісування), фінальний pricing.json від Влада, демо Владу (/admin /orders /price функціонал), фото ланцюжка (поки тільки браслет), опціональна Задача 6.
 
-Блокер: show_measure_button у старій воронці тільки для браслета → для ланцюжка text-fallback. prefilled з extract_order_context може потрапити у _filled при спецсимволах → дивитись туди при проблемах.
+**Блокери:** pre-commit hook зламаний (у BACKLOG, --no-verify хід).
 
-Делегувати далі:
-1. Документація (ADMIN_GUIDE.md, USER_GUIDE.md)
-2. Демо Владу + фінальний pricing.json
-3. Фото для ланцюжка
-
-Шаре HOT.md + WARM.md при продовженні.
+Поділися HOT.md + WARM.md з нового чату.
