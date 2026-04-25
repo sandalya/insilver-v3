@@ -13,6 +13,10 @@ from bot.admin_orders import (
     handle_status_change, handle_set_status, handle_price_change, handle_delete_order,
     handle_delete_confirm
 )
+from bot.doc_sender import send_doc_in_sections
+from telegram import BotCommandScopeChat
+from core.admin_state import is_active as admin_is_active, activate as admin_activate, deactivate as admin_deactivate
+from core.menu import CLIENT_COMMANDS, ADMIN_COMMANDS
 
 log = logging.getLogger("bot.admin")
 
@@ -47,11 +51,35 @@ def save_training_data(data: List[Dict]) -> bool:
 
 
 async def admin_panel(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    """Команда /admin — головне меню."""
+    """Команда /admin — toggle: вхід/вихід з адмін-режиму."""
     user = update.effective_user
+    chat_id = update.effective_chat.id
     if not is_admin(user.id):
-        await update.message.reply_text("Немає доступу.")
+        # Не адмін — silent ignore (як для клієнта)
         return
+
+    # TOGGLE: якщо вже активний — виходимо
+    if admin_is_active(user.id):
+        admin_deactivate(user.id)
+        try:
+            await ctx.bot.set_my_commands(
+                CLIENT_COMMANDS, scope=BotCommandScopeChat(chat_id=chat_id)
+            )
+        except Exception as e:
+            log.warning(f"set_my_commands(client) failed: {e}")
+        await update.message.reply_text(
+            "🔓 Ти вийшов з адмінки.\n/admin — щоб зайти знову."
+        )
+        return
+
+    # АКТИВАЦІЯ
+    admin_activate(user.id)
+    try:
+        await ctx.bot.set_my_commands(
+            ADMIN_COMMANDS, scope=BotCommandScopeChat(chat_id=chat_id)
+        )
+    except Exception as e:
+        log.warning(f"set_my_commands(admin) failed: {e}")
 
     data = load_training_data()
     keyboard = InlineKeyboardMarkup([
@@ -61,8 +89,10 @@ async def admin_panel(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("📋 Замовлення", callback_data="admin_orders_menu")],
     ])
     await update.message.reply_text(
-        f"🔧 Адмін панель InSilver\n\nЗаписів у базі: {len(data)}",
-        reply_markup=keyboard
+        f"🔧 Адмін панель InSilver\n\nЗаписів у базі: {len(data)}\n\n"
+        f"_Повторне /admin вийде з адмін-режиму._",
+        reply_markup=keyboard,
+        parse_mode="Markdown"
     )
 
 
@@ -358,6 +388,8 @@ async def cmd_price(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     if not update.message:
         return  # edited_message або callback — ігноруємо
     user = update.effective_user
+    if not user or not is_admin(user.id) or not admin_is_active(user.id):
+        return  # silent ignore — як для клієнта
     if not user or not is_admin(user.id):
         return  # тиша для не-адмінів
     
@@ -450,6 +482,9 @@ async def cmd_price(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 
 async def cmd_trainer_done(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     """Завершення вводу контенту в режимі тренера."""
+    user = update.effective_user
+    if not user or not is_admin(user.id) or not admin_is_active(user.id):
+        return  # silent ignore — як для клієнта
     trainer = ctx.user_data.get("trainer")
     if not trainer:
         return  # не в режимі тренера — ігноруємо
@@ -471,6 +506,21 @@ async def cmd_trainer_done(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     )
 
 
+async def cmd_admin_help(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    """Команда /admin_help — шле повний ADMIN_GUIDE.md секціями."""
+    user = update.effective_user
+    if not user or not is_admin(user.id) or not admin_is_active(user.id):
+        return  # silent ignore — як для клієнта
+    chat_id = update.effective_chat.id
+    md_path = Path(__file__).parent.parent / "ADMIN_GUIDE.md"
+    if not md_path.exists():
+        await ctx.bot.send_message(chat_id, "❌ ADMIN_GUIDE.md не знайдено")
+        return
+    await ctx.bot.send_message(chat_id, "📖 Надсилаю інструкцію секціями…")
+    sent = await send_doc_in_sections(ctx.bot, chat_id, md_path)
+    log.info(f"/admin_help → {sent} секцій надіслано user {user.id}")
+
+
 def create_admin_handlers():
     """Повертає список хендлерів для адміна."""
     return [
@@ -478,6 +528,7 @@ def create_admin_handlers():
         CommandHandler("orders", cmd_orders),
         CommandHandler("price", cmd_price),
         CommandHandler("done", cmd_trainer_done),
+        CommandHandler("admin_help", cmd_admin_help),
         CallbackQueryHandler(handle_admin_callback, pattern="^(admin_|trainer_|kb_)"),
         CallbackQueryHandler(handle_order_edit, pattern="^order_edit:"),
         CallbackQueryHandler(handle_status_change, pattern="^status:"),

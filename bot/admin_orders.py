@@ -5,7 +5,12 @@ from datetime import datetime
 from pathlib import Path
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
-from core.config import ORDERS_FILE
+from core.config import ORDERS_FILE, ADMIN_IDS
+from core.admin_state import is_active as admin_is_active
+
+
+def is_admin(user_id: int) -> bool:
+    return user_id in ADMIN_IDS
 
 log = logging.getLogger("admin_orders")
 
@@ -25,6 +30,9 @@ def save_orders(orders):
 
 async def cmd_orders(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     """Показати всі замовлення. Підтримує виклик з /orders і з callback."""
+    user = update.effective_user
+    if not user or not is_admin(user.id) or not admin_is_active(user.id):
+        return  # silent ignore — як для клієнта
     if update.callback_query:
         send = update.callback_query.message.reply_text
     elif update.message:

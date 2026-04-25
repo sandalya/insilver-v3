@@ -7,8 +7,10 @@ import signal
 import traceback
 import asyncio
 from telegram.ext import Application
-from telegram import BotCommand
+from telegram import BotCommandScopeDefault
 from core.config import BOT_TOKEN, LOGS_DIR
+from core.menu import CLIENT_COMMANDS
+from core.admin_state import reset_all as reset_admin_sessions
 from core.health import health_checker
 from bot.client import setup_handlers
 
@@ -89,6 +91,19 @@ def main():
         async def post_init(application):
             await application.bot.delete_webhook(drop_pending_updates=True)
             log.info("🧹 Webhook очищено, pending updates скинуто")
+
+            # Скидаємо всі активні адмін-сесії — після рестарту треба /admin знову
+            reset_admin_sessions()
+
+            # Дефолтне меню для всіх — клієнтське. Адмінське виставляється
+            # індивідуально коли адмін заходить через /admin.
+            try:
+                await application.bot.set_my_commands(
+                    CLIENT_COMMANDS, scope=BotCommandScopeDefault()
+                )
+                log.info(f"📋 Клієнтське меню встановлено: {len(CLIENT_COMMANDS)} команд")
+            except Exception as e:
+                log.error(f"⚠️ Не вдалось встановити меню: {e}")
         
         app.post_init = post_init
         

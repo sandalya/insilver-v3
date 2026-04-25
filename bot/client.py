@@ -12,6 +12,7 @@ from core.catalog import search_catalog, format_item_text
 from core.health import health_checker
 from core.conversation_logger import log_user_message, log_bot_response, log_order_action, log_error_interaction
 from bot.order import build_order_handler, build_new_order_handler
+from bot.doc_sender import send_doc_in_sections
 from core.router import classify_intent
 from datetime import datetime
 
@@ -164,16 +165,18 @@ async def cmd_contact(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 
 
 async def cmd_help(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    """Handle /help command."""
-    response = "❓ **Як користуватися ботом:**\n\n" + \
-              "🔍 **Пошук:** Напишіть назву виробу (наприклад: \"ланцюжки\", \"браслет бісмарк\")\n" + \
-              "📋 **Каталог:** Переглянути всі категорії виробів\n" + \
-              "🛒 **Замовлення:** Два варіанти:\n" + \
-              "   • Швидке замовлення конкретного виробу\n" + \
-              "   • Індивідуальне замовлення під ваші параметри\n\n" + \
-              "💬 **Питання:** Просто напишіть що вас цікавить, і я допоможу!\n\n" + \
-              "📱 **Контакти:** /contact для зв'язку з майстром"
-    await update.message.reply_text(response, parse_mode="Markdown")
+    """Handle /help command — шле повний USER_GUIDE.md секціями."""
+    chat_id = update.effective_chat.id
+    md_path = Path(__file__).parent.parent / "USER_GUIDE.md"
+    if not md_path.exists():
+        await ctx.bot.send_message(
+            chat_id,
+            "❌ Інструкція тимчасово недоступна. Напишіть /contact або зверніться до майстра."
+        )
+        return
+    await ctx.bot.send_message(chat_id, "📖 Надсилаю інструкцію секціями…")
+    sent = await send_doc_in_sections(ctx.bot, chat_id, md_path)
+    log.info(f"/help → {sent} секцій надіслано chat {chat_id}")
 
 
 async def handle_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
