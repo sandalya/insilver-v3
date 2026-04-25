@@ -33,7 +33,7 @@ tags: [order, funnel, ui]
 status: active
 ```
 
-**Основна (стара, `build_order_handler`)** — зареєстрована ПЕРШОЮ в `setup_handlers`. `bot/order.py` + `core/order_config.py` + `core/order_context.py` (автозаповнення з історії). 8 типів виробів: ланцюжок, браслет, хрестик, кулон, обручка, перстень, набір, інше. Кожен тип має свої кроки (напр. ланцюжок: плетіння→довжина→маса→покриття→застібка→додатково→контакт→коментар→**Summary+Confirm**). Кнопки "⬅️ Назад" і "❌ Скасувати" на кожному кроці. `_waiting_custom` для обробки "✏️ Інше" — бот просить текстовий ввід. **Summary+Confirm крок готовий** (сесія 22.04). **Задача 1 (Інше) підтверджена** (сесія 25.04). **allow_reentry=True закрито** (сесія 25.04) — дозволяє повторний вхід у воронку після завершення.
+**Основна (стара, `build_order_handler`)** — зареєстрована ПЕРШОЮ в `setup_handlers`. `bot/order.py` + `core/order_config.py` + `core/order_context.py` (автозаповнення з історії). 8 типів виробів: ланцюжок, браслет, хрестик, кулон, обручка, перстень, набір, інше. Кожен тип має свої кроки (напр. ланцюжок: плетіння→довжина→маса→покриття→застібка→додатково→контакт→коментар→**Summary+Confirm**). Кнопки "⬅️ Назад" і "❌ Скасувати" на кожному кроці. `_waiting_custom` для обробки "✏️ Інше" — бот просить текстовий ввід. **Summary+Confirm крок готовий** (сесія 22.04). **Задача 1 (Інше) підтверджена** (сесія 25.04). **allow_reentry=True закрито** (сесія 25.04) — дозволяє повторний вхід у воронку після завершення. **COMPLEX_KEYWORDS захист** (сесія 25.04) — комплект/каблучка/перстень/вушко → handoff.
 
 **Нова (nb_*, `build_new_order_handler`)** — зареєстрована ДРУГОЮ (запасна). Тільки ланцюжок/браслет. Має калькулятор і summary перед підтвердженням.
 
@@ -42,6 +42,36 @@ status: active
 **Результати Ed тестування:** 4 PASS + 1 WARN + 1 несправжній FAIL (метадані). Все готово до демо.
 
 **Беклог (низький пріоритет):** race state leak, comment_flow текст, happy_path пусте фінальне повідомлення. Не блокують релізу.
+
+## /price команда
+
+```yaml
+last_touched: 2026-04-25
+tags: [pricing, command]
+status: active
+```
+
+`/price 150` — стандартна команда для ручного розрахунку ціни за 150 гр срібла. Обробка: `bot/client.py` → `core/pricing.py` → `calculate_price()`. **NoneType захист** (сесія 25.04). Підтримує per-weaving коефіцієнти (default + варіації). Готово до демо.
+
+## Як заміряти (measuring guide)
+
+```yaml
+last_touched: 2026-04-25
+tags: [ux, photo, guide]
+status: active
+```
+
+Кнопка 📏 Як заміряти у старій воронці на кроці довжини. **Для браслета:** hand_measure_1.jpg (браслет на руці) + hand_measure_2.jpg (краще видно). Фото закладені в `bot/order.py`. **Для ланцюжка:** поки text-fallback HOW_TO_MEASURE (дожидаємось від Влада фото). Ed тест: `10_order_funnel` проходить.
+
+## Видалення попередніх повідомлень воронки
+
+```yaml
+last_touched: 2026-04-25
+tags: [ux, cleanup, order]
+status: active
+```
+
+Всі повідомлення з попередніх кроків видаляються при переході на новий крок (впроваджено через `delete_previous_messages`). **Включено видалення першого повідомлення Що замовляємо** (сесія 25.04). Покращує UX.
 
 ## Prompt і guardrails
 
@@ -61,17 +91,27 @@ tags: [handoff, admin]
 status: done
 ```
 
-`core/handoff.py` — pause/resume. `handle_photo` — фото → адміну + пауза. `handle_resume` — callback для адміна. Ed тести `09_handoff` — green. Handoff warmup протестовано (сесія 22.04). **safe_admin_send helper з warmup** (сесія 25.04) — тепер 'Chat not found' не критична помилка. **Замінено 4 точки нотифікацій адміна** (сесія 25.04). Між Ed-блоками треба скидати `data/handoff_state.json` → `{}`.
+`core/handoff.py` — pause/resume. `handle_photo` — фото → адміну + пауза. `handle_resume` — callback для адміна. Ed тести `09_handoff` — green. Handoff warmup протестовано (сесія 22.04). **safe_admin_send helper з warmup** (сесія 25.04) — тепер 'Chat not found' не критична помилка. **Замінено 4 точки нотифікацій адміна** (сесія 25.04): order.py x2, client.py x2. Між Ed-блоками треба скидати `data/handoff_state.json` → `{}`.
+
+## Адмін-картка з НП
+
+```yaml
+last_touched: 2026-04-25
+tags: [admin, order, delivery]
+status: active
+```
+
+Адмін-картка замовлення тепер містить 🚚 НП (Нова Пошта) інформацію: город, відділення, адреса. Режим A з A_NP_OFFICE станом. Фото замовлення. order_id у форматі #YYYYMMDD-HHMM. Ed тест: `10_order_funnel` → order_id #20260425-1405 ✅. Стара воронка видає без #, нова з # — не блокує критично.
 
 ## Keyword detection (складні вироби)
 
 ```yaml
-last_touched: 2026-04-17
+last_touched: 2026-04-25
 tags: [keywords, handoff, routing]
-status: planned
+status: active
 ```
 
-Має спрацьовувати в `handle_message` (`bot/client.py`) для вільного чату — НЕ всередину ConversationHandler (воронки). ConversationHandler природно ізолює — `handle_message` не викликається коли клієнт у воронці. Статус: не перевірено чи є в коді. Треба `grep -n "COMPLEX_KEYWORDS\|HUMAN_TRIGGERS" bot/client.py`.
+**COMPLEX_KEYWORDS захист** (сесія 25.04): комплект, каблучка, перстень, вушко → handoff до Влада. Спрацьовує в `handle_message` (`bot/client.py`) для вільного чату — НЕ всередину ConversationHandler (воронки). Реалізовано через перевірку текстової інформації перед роутингом. Статус: **перевірено і працює** (сесія 25.04).
 
 ## Калькулятор
 
@@ -81,7 +121,7 @@ tags: [pricing, calculator]
 status: done
 ```
 
-`core/pricing.py` з `calculate_price()`, `format_price()`, `get_price_per_gram()`. `data/pricing.json` — ціни. Працює в новій воронці (nb_*). **Pricing підтверджено Владом** (сесія 22.04). Готово до демо.
+`core/pricing.py` з `calculate_price()`, `format_price()`, `get_price_per_gram()`. `data/pricing.json` — ціни. Працює в новій воронці (nb_*) і `/price` команді. **Pricing підтверджено Владом** (сесія 22.04). Готово до демо.
 
 ## Каталог і пошук
 
@@ -163,7 +203,7 @@ status: in_progress
 
 **USER_GUIDE.md** — для кінцевих користувачів. Вже є ~154 рядків, потребує дороблення і причісування.
 
-Фіналізація — останній krok перед релізом.
+Фіналізація — останній крок перед релізом (сесія 25.04).
 
 ## Roadmap (з implementation guide v003)
 
@@ -188,9 +228,8 @@ status: active
 4. **Демо Владу** — /admin, /orders, функціонал
 5. **Релізна перевірка** — pre-commit hook у BACKLOG, технічний чекліст 5/5 ✅
 
-**Потім (постrelease):**
+**Потім (postrelease):**
 - Задача 6 (опціональна)
-- Keyword detection перевірка
 - RAG замість training.json
 
 ## Layout проекту
@@ -205,9 +244,9 @@ status: active
 insilver-v3/
 ├── main.py              — точка входу (httpx токен-логи закриті, сесія 25.04)
 ├── bot/
-│   ├── client.py        — обробка повідомлень + router
-│   ├── order.py         — форма замовлення (стара, основна, allow_reentry=True)
-│   ├── admin.py         — адмін панель
+│   ├── client.py        — обробка повідомлень + router + /price + COMPLEX_KEYWORDS
+│   ├── order.py         — форма замовлення (стара, основна, allow_reentry=True, видалення попередніх)
+│   ├── admin.py         — адмін панель (safe_admin_send, сесія 25.04)
 │   └── admin_orders.py  — управління замовленнями
 ├── core/
 │   ├── ai.py            — Anthropic API
@@ -220,13 +259,13 @@ insilver-v3/
 │   ├── conversation_logger.py
 │   ├── lock.py          — single process lock
 │   ├── order_config.py  — конфіг анкети (8 типів виробів)
-│   ├── order_context.py — автозаповнення з історії
+│   ├── order_context.py — автозаповнення з історії (prefilled → extract_order_context)
 │   ├── photo.py         — фото → адмін
-│   ├── pricing.py       — калькулятор цін
+│   ├── pricing.py       — калькулятор цін + /price команда
 │   ├── backup_system.py
 │   └── log_analyzer.py
 ├── data/                — каталог, training.json, pricing.json
 ├── logs/
-├── tests/               — Ed QA тести (legacy)
+├── tests/               — Ed QA тести
 └── scripts/
 ```

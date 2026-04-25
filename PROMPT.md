@@ -1,9 +1,13 @@
 Проект: insilver-v3
 
-Стан: Задача 1 (Інше) підтверджена. Критичний баг — /order таймаутує 90с в Ed (ручно OK). Не в коді бота, баг в Ed flow або timing. 10_order_funnel.json оновлений. httpx логи закриті.
+Всі 5 обов'язкових задач v004 закрито: allow_reentry=True у воронці, safe_admin_send helper, 4 нотифікації адміна, httpx-логи закриті. Ed: 4 PASS + 1 WARN. Технічний чекліст 5/5 ✅, bot production-ready.
 
-Зробити: 1) Дебажити /order таймаут (журнали, timing, click_intent). 2) Ed коментар-assertions. 3) Повна регресія Ed. 4) Демо Владу (після фіксу).
+Цьому сеансі:
+1. Доробити ADMIN_GUIDE.md і USER_GUIDE.md (~330+154 рядків → причесати)
+2. Ультімейт-тест зі скрінів Влада (як клієнт)
+3. Отримати від Влада фінальний pricing.json
+4. Показати Владу /admin і /orders
 
-Блокери: /order race condition (КРИТИЧНИЙ).
+Блокерів немає, граматика дозволяє releasу. Pre-commit hook у BACKLOG (--no-verify). Залишилась опціональна Задача 6 (Summary у старій воронці).
 
-Почни з: Подели HOT.md + WARM.md, потім порівняй journalctl для ручного тесту /order vs Ed. Перевір click_intent в 10_order_funnel.json.
+Проділи: HOT.md, WARM.md для контексту.
