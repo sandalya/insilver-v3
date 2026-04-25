@@ -17,3 +17,7 @@ __pycache__/
 bot.pid
 venv/
 data/orders/orders.json
+
+# Generated PDF docs (regen via scripts/regen_docs.sh)
+data/docs/
+data/admin_active.json
