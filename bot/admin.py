@@ -266,8 +266,10 @@ async def handle_admin_callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 
 async def cmd_price(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     """Адмін: /price — показати ціни. /price 150 — змінити дефолтну. /price <плетіння> 160 — для конкретного."""
+    if not update.message:
+        return  # edited_message або callback — ігноруємо
     user = update.effective_user
-    if not is_admin(user.id):
+    if not user or not is_admin(user.id):
         return  # тиша для не-адмінів
     
     from core.pricing import load_pricing, save_pricing

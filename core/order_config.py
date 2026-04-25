@@ -346,6 +346,15 @@ def get_keyboard(step: dict, step_index: int = 0) -> list | None:
     return buttons
 
 
+def _escape_md(s) -> str:
+    """Екранує мінімум Markdown-символів щоб не ламати parse_mode=Markdown."""
+    if not isinstance(s, str):
+        s = str(s)
+    for ch in ("*", "_", "`", "[", "]"):
+        s = s.replace(ch, "\\" + ch)
+    return s
+
+
 def format_step_message(step: dict, step_index: int, total_steps: int, filled: dict) -> str:
     """Форматує текст кроку з прогресом і вже заповненим."""
     key_names = {
@@ -365,6 +374,6 @@ def format_step_message(step: dict, step_index: int, total_steps: int, filled: d
         text += "\n\n📝 Вже вказано:"
         for key, val in filled.items():
             if val and not key.startswith("_"):
-                text += f"\n  • {key_names.get(key, key)}: {val}"
+                text += f"\n  • {key_names.get(key, key)}: {_escape_md(val)}"
 
     return text

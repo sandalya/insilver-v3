@@ -51,8 +51,8 @@ def save_order(order: dict):
 
 async def notify_owner(ctx, order: dict, user):
     """Відправляє сповіщення Владу з кнопкою написати клієнту."""
-    lines = [f"🛒 *Нове замовлення #{order['id']}*\n"]
-    lines.append(f"👤 {order.get('name', '—')} | @{user.username or '—'} | `{user.id}`")
+    lines = [f"🛒 Нове замовлення #{order['id']}\n"]
+    lines.append(f"👤 {order.get('name', '—')} | @{user.username or '—'} | id: {user.id}")
     lines.append(f"📞 {order.get('phone', '—')}")
     if order.get('city'):
         lines.append(f"📍 {order['city']}")
@@ -76,7 +76,6 @@ async def notify_owner(ctx, order: dict, user):
     await safe_admin_send(ctx, OWNER_CHAT_ID, lambda: ctx.bot.send_message(
         OWNER_CHAT_ID,
             "\n".join(lines),
-            parse_mode="Markdown",
             reply_markup=InlineKeyboardMarkup([[
                 InlineKeyboardButton("💬 Написати клієнту", url=f"tg://user?id={user.id}")
             ]])
@@ -178,10 +177,13 @@ async def mode_b_start(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         return await b_init_steps(update, ctx, prefilled["type"], reply)
 
     buttons = get_keyboard(TYPE_STEP, step_index=0)
-    await reply(
+    sent = await reply(
         TYPE_STEP["text"],
         reply_markup=InlineKeyboardMarkup(buttons) if buttons else None
     )
+    # Зберегти id для подальшого видалення коли клієнт обере тип
+    if sent and hasattr(sent, "message_id"):
+        ctx.user_data["order"]["_last_step_msg_id"] = sent.message_id
     return B_TYPE
 
 
@@ -205,7 +207,8 @@ async def b_init_steps(update, ctx, product_type: str, reply_func=None):
 
 
 async def b_send_step(update, ctx, reply_func=None):
-    """Відправляє поточний крок. Завжди повертає B_STEP."""
+    """Відправляє поточний крок. Завжди повертає B_STEP.
+    Видаляє попереднє повідомлення кроку щоб чат залишався чистим."""
     order = ctx.user_data["order"]
     steps = order["_steps"]
     idx = order["_step_idx"]
@@ -228,12 +231,25 @@ async def b_send_step(update, ctx, reply_func=None):
         nav_row.append(InlineKeyboardButton("❌ Скасувати", callback_data="f:cancel"))
         keyboard = InlineKeyboardMarkup([nav_row])
 
+    # Видалити попереднє повідомлення кроку щоб чат залишався чистим
+    chat_id = update.effective_chat.id
+    prev_msg_id = order.get("_last_step_msg_id")
+    if prev_msg_id:
+        try:
+            await ctx.bot.delete_message(chat_id, prev_msg_id)
+        except Exception as e:
+            log.debug(f"Не вдалось видалити повідомлення {prev_msg_id}: {e}")
+
     if reply_func:
-        await reply_func(text, reply_markup=keyboard, parse_mode="Markdown")
+        sent = await reply_func(text, reply_markup=keyboard)
     elif update.callback_query:
-        await update.callback_query.message.reply_text(text, reply_markup=keyboard, parse_mode="Markdown")
+        sent = await update.callback_query.message.reply_text(text, reply_markup=keyboard)
     else:
-        await update.message.reply_text(text, reply_markup=keyboard, parse_mode="Markdown")
+        sent = await update.message.reply_text(text, reply_markup=keyboard)
+
+    # Запам'ятати ID нового повідомлення для наступного видалення
+    if sent and hasattr(sent, "message_id"):
+        order["_last_step_msg_id"] = sent.message_id
 
     return B_STEP
 
@@ -460,7 +476,7 @@ async def _save_and_notify_impl(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     order["tg_name"] = user.first_name or ""
     order["delivery"] = "Нова Пошта"
     order["created_at"] = datetime.now().isoformat()
-    for k in ["_mode", "_prefilled", "_steps", "_step_idx", "_filled", "_waiting_custom"]:
+    for k in ["_mode", "_prefilled", "_steps", "_step_idx", "_filled", "_waiting_custom", "_last_step_msg_id"]:
         order.pop(k, None)
     if order.get("contact") and not order.get("name"):
         order["name"] = order["contact"]
@@ -469,7 +485,7 @@ async def _save_and_notify_impl(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     msg = update.callback_query.message if update.callback_query else update.message
     await msg.reply_text(
         f"✅ Замовлення *#{order['id']}* прийнято!\n\n"
-        f"Влад зв'яжеться з вами найближчим часом 🥈",
+        f"Наш співробітник зв'яжеться з вами найближчим часом 🥈",
         parse_mode="Markdown",
         reply_markup=ReplyKeyboardRemove()
     )
@@ -760,7 +776,7 @@ async def nb_confirm(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     log.info(f"Замовлення {order_id} від {user.id}")
     await query.message.reply_text(
         f"✅ Замовлення *{order_id}* прийнято!\n\n"
-        f"Влад зв'яжеться з вами найближчим часом 🥈",
+        f"Наш співробітник зв'яжеться з вами найближчим часом 🥈",
         parse_mode="Markdown"
     )
     calc = order.get("price_calc") or {}
