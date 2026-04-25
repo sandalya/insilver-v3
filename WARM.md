@@ -81,7 +81,7 @@ tags: [prompt, training, ai, guardrails]
 status: done
 ```
 
-`core/prompt.py` — системний промпт + 15 Q&A з `training.json`. Q&A вбудовані плоско у контекст. Мультимовність: розуміє всі мови, НІКОЛИ не відповідає російською. Guardrails: тільки срібло 925, не додавати зайвих елементів, релігійні вироби тільки з бази. Ed тести `07_prompt_guardrails` — green. Roadmap: замінити плоский training на RAG для масштабування.
+`core/prompt.py` — системний промпт + 15 Q&A з `training.json`. Q&A вбудовані плоско у контекст. Мультимовність: розуміє всі мови, НІКОЛИ не відповідає російською. Guardrails: тільки срібло 925, не додавати зайвих елементів, релігійні вироби тільки з бази. Ed тести `07_prompt_guardrails` — green. Roadmap: замінити плоский training на RAG для масштабування. **ПРИМІТКА:** prompt.py читає тільки content[0].text — фото в training records не підтримуються. Якщо буде RAG з картинками — повернутись.
 
 ## Handoff (human escalation)
 
@@ -91,7 +91,7 @@ tags: [handoff, admin]
 status: done
 ```
 
-`core/handoff.py` — pause/resume. `handle_photo` — фото → адміну + пауза. `handle_resume` — callback для адміна. Ed тести `09_handoff` — green. Handoff warmup протестовано (сесія 22.04). **safe_admin_send helper з warmup** (сесія 25.04) — тепер 'Chat not found' не критична помилка. **Замінено 4 точки нотифікацій адміна** (сесія 25.04): order.py x2, client.py x2. Між Ed-блоками треба скидати `data/handoff_state.json` → `{}`.
+`core/handoff.py` — pause/resume. `handle_photo` — фото → адміну + пауза. `handle_resume` — callback для адміна. Ed тести `09_handoff` — green. Handoff warmup протестовано (сесія 22.04). **safe_admin_send helper з warmup** (сесія 25.04) — тепер 'Chat not found' не критична помилка. **Замінено 4 точки нотифікацій адміна** (сесія 25.04): order.py x2, client.py x2. Між Ed-блоками треба скидати `data/handoff_state.json` → `{}`. **handle_photo делегує управління якщо ctx.user_data.trainer присутній** (сесія 25.04).
 
 ## Адмін-картка з НП
 
@@ -137,21 +137,31 @@ status: active
 
 ```yaml
 last_touched: 2026-04-25
-tags: [admin, ui]
+tags: [admin, ui, commands]
 status: ready_for_demo
 ```
 
-`bot/admin.py` — адмін панель (спрощена, 279 рядків). `bot/admin_orders.py` — управління замовленнями. Команди: `/admin`, `/orders`. **Адмін нотифікації оновлені** (сесія 25.04) — 4 точки замінені на safe_admin_send. **Готово до демо Владу**.
+`bot/admin.py` — адмін панель (279 рядків). `bot/admin_orders.py` — управління замовленнями. Команди: `/admin`, `/orders`. **Обидві команди зареєстровані як CommandHandler** (сесія 25.04). **Адмін нотифікації оновлені** (сесія 25.04) — 4 точки замінені на safe_admin_send. **Готово до демо Владу**.
+
+## Trainer mode (knowledge base training)
+
+```yaml
+last_touched: 2026-04-25
+tags: [admin, training, knowledge]
+status: active
+```
+
+Тренерський режим для адміна: /start в 1:1 с ботом активує trainer mode, збирає дані (title, content, category) і зберігає у `data/training.json`. **Команда /done тепер працює в trainer mode** (сесія 25.04) — видалено ~filters.COMMAND фільтр з handle_trainer_input. **handle_trainer_photo graceful** (сесія 25.04) — відповідає "фото поки не підтримується", не handoff. **view_knowledge** (сесія 25.04) — показує список записів з 👁 view + 🗑 del кнопками. **kb_view_<id>** callback розгортає запис (title+content+3 кнопки). **kb_edit_<id>** callback видаляє старий запис і стартує trainer з нуля. Smoke: /done збереження (38 записів ✅), 👁 view (✅), ✏️ edit (✅). 38 записів у training.json.
 
 ## Photo handling
 
 ```yaml
-last_touched: 2026-04-16
-tags: [photo, media]
+last_touched: 2026-04-25
+tags: [photo, media, trainer]
 status: active
 ```
 
-`core/photo.py` — обробка фото від клієнтів. Фото → адміну → handoff пауза → "Повернути бота".
+`core/photo.py` — обробка фото від клієнтів. Фото → адміну → handoff пауза → "Повернути бота". **handle_photo делегує якщо ctx.user_data.trainer присутній** (сесія 25.04) — trainer використовує handle_trainer_photo з graceful відповіддю "фото поки не підтримується".
 
 ## Conversation logger
 
@@ -187,11 +197,9 @@ status: active
 
 Сервіс: `insilver-v3.service` (systemd). Бот: `@insilver_v3_bot`. Health checker: `core/health.py`. Lock: `core/lock.py` (single process). Pi5, workspace `/home/sashok/.openclaw/workspace/insilver-v3/`.
 
-**main.py:** httpx токен-логи закриті (сесія 25.04).
+**main.py:** httpx токен-логи закриті (сесія 25.04). **Глобальний імпорт Path:** додано в client.py (сесія 25.04).
 
 **pre-commit hook:** зламаний (посилається на 3 файли тестів, з яких 2 не існують). Рішення: всі коміти `--no-verify`. Фіксить: у BACKLOG.
-
-**Глобальний імпорт Path:** додано в client.py (сесія 25.04) — handle_photo більше не падає на імпорт.
 
 ## Документація
 
@@ -232,7 +240,7 @@ status: active
 
 **Потім (postrelease):**
 - Задача 6 (опціональна)
-- RAG замість training.json
+- RAG замість training.json (+ фото в training records)
 
 ## Layout проекту
 
@@ -246,27 +254,27 @@ status: active
 insilver-v3/
 ├── main.py              — точка входу (httpx токен-логи закриті, Path import глобальний, сесія 25.04)
 ├── bot/
-│   ├── client.py        — обробка повідомлень + router + /price + COMPLEX_KEYWORDS + Path import
+│   ├── client.py        — обробка повідомлень + router + /price + COMPLEX_KEYWORDS + Path import + trainer delegation
 │   ├── order.py         — форма замовлення (стара, основна, allow_reentry=True, видалення попередніх, show_measure_button)
-│   ├── admin.py         — адмін панель (safe_admin_send, сесія 25.04)
-│   └── admin_orders.py  — управління замовленнями
+│   ├── admin.py         — адмін панель (safe_admin_send, CommandHandler, сесія 25.04)
+│   └── admin_orders.py  — управління замовленнями (CommandHandler)
 ├── core/
 │   ├── ai.py            — Anthropic API
 │   ├── router.py        — intent classification
 │   ├── catalog.py       — пошук в каталозі
-│   ├── prompt.py        — системний промпт + guardrails
+│   ├── prompt.py        — системний промпт + guardrails (тільки text, не photo)
 │   ├── config.py        — конфігурація
-│   ├── handoff.py       — human escalation (safe_admin_send, сесія 25.04)
+│   ├── handoff.py       — human escalation (safe_admin_send, trainer delegation, сесія 25.04)
 │   ├── health.py        — health checker
 │   ├── conversation_logger.py
 │   ├── lock.py          — single process lock
 │   ├── order_config.py  — конфіг анкети (8 типів виробів)
 │   ├── order_context.py — автозаповнення з історії (prefilled → extract_order_context)
-│   ├── photo.py         — фото → адмін
+│   ├── photo.py         — фото → адмін (trainer delegation)
 │   ├── pricing.py       — калькулятор цін + /price команда
 │   ├── backup_system.py
 │   └── log_analyzer.py
-├── data/                — каталог, training.json, pricing.json
+├── data/                — каталог, training.json (38 записів), pricing.json
 ├── logs/
 ├── tests/               — Ed QA тести
 └── scripts/

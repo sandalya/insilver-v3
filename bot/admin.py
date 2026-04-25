@@ -166,7 +166,10 @@ async def view_knowledge(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         rid = record.get("id", "?")
         title = record.get("title", "без назви")[:40]
         text += f"#{rid} {title}\n"
-        buttons.append([InlineKeyboardButton(f"🗑 #{rid}", callback_data=f"kb_del_{rid}")])
+        buttons.append([
+            InlineKeyboardButton(f"👁 #{rid}", callback_data=f"kb_view_{rid}"),
+            InlineKeyboardButton(f"🗑 #{rid}", callback_data=f"kb_del_{rid}"),
+        ])
 
     nav = []
     if page > 0:
@@ -210,6 +213,56 @@ async def show_conversation_stats(update: Update, ctx: ContextTypes.DEFAULT_TYPE
         text = "📊 Статистика недоступна"
     keyboard = InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Назад", callback_data="admin_back")]])
     await query.edit_message_text(text, reply_markup=keyboard)
+
+
+async def view_record(update: Update, ctx: ContextTypes.DEFAULT_TYPE, record_id: int):
+    """Показати повний запис бази знань."""
+    query = update.callback_query
+    await query.answer()
+    data = load_training_data()
+    record = next((r for r in data if r.get("id") == record_id), None)
+    if not record:
+        await query.edit_message_text(f"❌ Запис #{record_id} не знайдено")
+        return
+    title = record.get("title", "без назви")
+    content_list = record.get("content", [])
+    answer = content_list[0].get("text", "") if content_list and isinstance(content_list, list) else ""
+    text = f"📖 Запис #{record_id}\n\n"
+    text += f"❓ Питання:\n{title}\n\n"
+    text += f"💬 Відповідь:\n{answer}"
+    if len(text) > 4000:
+        text = text[:3997] + "..."
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton("✏️ Редагувати", callback_data=f"kb_edit_{record_id}")],
+        [InlineKeyboardButton("🗑 Видалити", callback_data=f"kb_del_{record_id}")],
+        [InlineKeyboardButton("🔙 До списку", callback_data="admin_knowledge")],
+    ])
+    await query.edit_message_text(text, reply_markup=keyboard)
+
+
+async def start_edit_record(update: Update, ctx: ContextTypes.DEFAULT_TYPE, record_id: int):
+    """Видалити старий запис і стартувати trainer mode."""
+    query = update.callback_query
+    await query.answer()
+    data = load_training_data()
+    before = len(data)
+    data = [r for r in data if r.get("id") != record_id]
+    if len(data) < before:
+        save_training_data(data)
+    ctx.user_data["trainer"] = {"title": None, "content": [], "step": "title"}
+    await query.edit_message_text(
+        f"✏️ Редагування #{record_id}\n\n"
+        "Старий запис видалено. Введіть новий заголовок/питання.\n\n"
+        "або /cancel щоб скасувати"
+    )
+
+
+async def handle_trainer_photo(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    """Адмін у trainer mode скинув фото — поки не підтримується."""
+    await update.message.reply_text(
+        "📸 Фото у режимі тренера поки не підтримується.\n"
+        "Введіть текстом або /cancel щоб вийти."
+    )
 
 
 async def handle_admin_callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
@@ -256,6 +309,12 @@ async def handle_admin_callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     elif data == "kb_next":
         ctx.user_data["kb_page"] = ctx.user_data.get("kb_page", 0) + 1
         await view_knowledge(update, ctx)
+    elif data.startswith("kb_view_"):
+        rid = int(data.split("_")[-1])
+        await view_record(update, ctx, rid)
+    elif data.startswith("kb_edit_"):
+        rid = int(data.split("_")[-1])
+        await start_edit_record(update, ctx, rid)
     elif data.startswith("kb_del_"):
         rid = int(data.split("_")[-1])
         await delete_knowledge_record(update, ctx, rid)
@@ -359,10 +418,36 @@ async def cmd_price(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         return
 
 
+async def cmd_trainer_done(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    """Завершення вводу контенту в режимі тренера."""
+    trainer = ctx.user_data.get("trainer")
+    if not trainer:
+        return  # не в режимі тренера — ігноруємо
+    if trainer.get("step") != "content":
+        return
+    if not trainer["content"]:
+        await update.message.reply_text("Немає контенту. Введіть відповідь.")
+        return
+    trainer["step"] = "confirm"
+    full_content = " ".join(trainer["content"])
+    title_val = trainer["title"]
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton("✅ Зберегти", callback_data="trainer_save")],
+        [InlineKeyboardButton("❌ Скасувати", callback_data="trainer_cancel")],
+    ])
+    await update.message.reply_text(
+        f"Перевірте запис:\n\nПитання: {title_val}\n\nВідповідь: {full_content[:300]}",
+        reply_markup=keyboard
+    )
+
+
 def create_admin_handlers():
     """Повертає список хендлерів для адміна."""
     return [
+        CommandHandler("admin", admin_panel),
+        CommandHandler("orders", cmd_orders),
         CommandHandler("price", cmd_price),
+        CommandHandler("done", cmd_trainer_done),
         CallbackQueryHandler(handle_admin_callback, pattern="^(admin_|trainer_|kb_)"),
         CallbackQueryHandler(handle_orders_callback, pattern="^(orders_|order_|set_status_|search_order|edit_order|delete_order|no_contact)"),
         MessageHandler(

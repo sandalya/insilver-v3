@@ -67,3 +67,15 @@ tags: [release, v004, complete, production-ready]
 ```
 
 Сесія 25.04 завершила v004 з COMPLEX_KEYWORDS (комплект/каблучка/перстень/вушко → handoff), /price 150 команда, COMMON_STEPS (+city +np_office), режим A з A_NP_OFFICE для адмін-картки, order_id fix (uuid → #YYYYMMDD-HHMM), кнопка 📏 Як заміряти (hand_measure_1.jpg + hand_measure_2.jpg для браслета), видалення попередніх повідомлень воронки, Markdown-краш фіксня (b_send_step + notify_owner без parse_mode), Влад → Наш співробітник, /price NoneType захист. Ed 10_order_funnel: 4 PASS + 1 WARN + 1 FAIL (метадані). Бот production-ready по функціоналу. Залишилось: ADMIN_GUIDE.md + USER_GUIDE.md, фінальний pricing.json від Влада, демо Владу, фото ланцюжка. Коміти: 541d98d (фічі), c58ed72 (фікси), всі --no-verify. Pre-commit hook у BACKLOG (нерелевантні посилання на тести).
+
+---
+
+## 2026-04-25: Адмінка v2 — trainer + knowledge base доробки
+
+```yaml
+archivals_at: 2026-04-25
+reason: completed admin panel with trainer mode, knowledge base view/edit, photo handling
+tags: [admin, trainer, knowledge-base, photo, completed]
+```
+
+Сесія 25.04 (друга частина) завершила адмінку v2: /admin і /orders зареєстровані як CommandHandler (раніше були у коді але не як обробники команд). Тренерський режим: /done тепер працює (видалено ~filters.COMMAND фільтр), handle_trainer_photo graceful "фото поки не підтримується" (не handoff), handle_photo делегує якщо ctx.user_data.trainer. view_knowledge: 👁 view + 🗑 del кнопки, kb_view_<id> розгортає запис (title+content+3 buttons), kb_edit_<id> редагує (delete+new trainer). Smoke ✅: /admin меню, /done (38 записів у training.json), 👁 view, ✏️ edit, фото graceful. Коміти з цієї частини уже у master. Фінальна версія адмінки готова до демо Владу.

@@ -420,6 +420,10 @@ HUMAN_TRIGGERS = [
 
 
 async def handle_photo(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    # Якщо адмін у режимі тренера — фото не для handoff, а для trainer
+    if ctx.user_data.get("trainer"):
+        from bot.admin import handle_trainer_photo
+        return await handle_trainer_photo(update, ctx)
     from core.handoff import pause_bot
     user = update.effective_user
     chat_id = update.effective_chat.id
