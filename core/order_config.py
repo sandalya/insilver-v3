@@ -220,6 +220,18 @@ COMMON_STEPS = [
         "options": None,
     },
     {
+        "key": "city",
+        "text": "Місто доставки?",
+        "hint": "ℹ️ Наприклад: Київ",
+        "options": None,
+    },
+    {
+        "key": "np_office",
+        "text": "Номер відділення Нової Пошти?",
+        "hint": "ℹ️ Наприклад: 42 або «Поштомат №1234»",
+        "options": None,
+    },
+    {
         "key": "comment",
         "text": "Щось уточнити? (опціонально)",
         "options": ["➖ Немає", "✍️ Є коментар"],
@@ -317,6 +329,10 @@ def get_keyboard(step: dict, step_index: int = 0) -> list | None:
                 idx = i + j
                 row.append(InlineKeyboardButton(opt, callback_data=f"f:{step_key}:{idx}"))
         buttons.append(row)
+
+    # Кнопка "Як заміряти" (для кроків довжини/розміру)
+    if step.get("show_measure_button"):
+        buttons.append([InlineKeyboardButton("📏 Як заміряти?", callback_data="f:measure")])
 
     # Службові кнопки
     if step_index > 0:

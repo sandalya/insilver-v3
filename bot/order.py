@@ -28,6 +28,7 @@ ORDERS_FILE = Path("data/orders/orders.json")
 # ─── Стани ────────────────────────────────────────────────────────────────────
 # Режим A
 A_NAME, A_PHONE, A_CITY, A_COMMENT = range(4)
+A_NP_OFFICE = 16  # окремий стан, поза основним range щоб не зсувати B_*
 # Режим B — нові кроки воронки
 B_TYPE, B_STEP, B_CONFIRM = range(4, 7)
 # Нова лінійна воронка
@@ -55,6 +56,8 @@ async def notify_owner(ctx, order: dict, user):
     lines.append(f"📞 {order.get('phone', '—')}")
     if order.get('city'):
         lines.append(f"📍 {order['city']}")
+    if order.get('np_office'):
+        lines.append(f"🚚 НП: {order['np_office']}")
 
     detail_keys = {
         'item_title': '🏷 Товар', 'type': 'Тип', 'weaving': 'Плетіння',
@@ -124,6 +127,12 @@ async def a_phone(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 
 async def a_city(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     ctx.user_data["order"]["city"] = update.message.text.strip()
+    await update.message.reply_text("Номер відділення Нової Пошти?")
+    return A_NP_OFFICE
+
+
+async def a_np_office(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    ctx.user_data["order"]["np_office"] = update.message.text.strip()
     await update.message.reply_text(
         "Коментар? (або /skip):",
         reply_markup=ReplyKeyboardRemove()
@@ -238,6 +247,42 @@ async def b_handle_button(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 
     if data == "f:cancel":
         return await cancel_order(update, ctx)
+
+    if data == "f:measure":
+        order = ctx.user_data.get("order", {})
+        product_type = order.get("type", "").lower()
+        chat_id = update.effective_chat.id
+        from pathlib import Path as _Path
+        static_dir = _Path("data/photos/static")
+        photos_to_send = []
+        if "браслет" in product_type:
+            for fname in ("hand_measure_1.jpg", "hand_measure_2.jpg"):
+                fpath = static_dir / fname
+                if fpath.exists():
+                    photos_to_send.append(fpath)
+        # TODO: додати фото для ланцюжка коли будуть
+        caption = (
+            "📏 *Як заміряти зап'ястя:*\n\n"
+            "1. Візьміть м'яку мірну стрічку або нитку\n"
+            "2. Обмотайте зап'ястя в найширшому місці\n"
+            "3. Заміряйте і додайте 1–2 см для комфорту\n\n"
+            "_Стандартні розміри: 18–22 см_"
+            if "браслет" in product_type else HOW_TO_MEASURE
+        )
+        try:
+            if photos_to_send:
+                # Перше фото з підписом, решта — без
+                with open(photos_to_send[0], "rb") as f:
+                    await ctx.bot.send_photo(chat_id, f, caption=caption, parse_mode="Markdown")
+                for fpath in photos_to_send[1:]:
+                    with open(fpath, "rb") as f:
+                        await ctx.bot.send_photo(chat_id, f)
+            else:
+                await ctx.bot.send_message(chat_id, caption, parse_mode="Markdown")
+        except Exception as e:
+            log.error(f"Помилка надсилання measure photo: {e}")
+            await ctx.bot.send_message(chat_id, HOW_TO_MEASURE)
+        return B_STEP
 
     if data == "f:back":
         order = ctx.user_data["order"]
@@ -409,7 +454,7 @@ async def _save_and_notify(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 async def _save_and_notify_impl(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     order = ctx.user_data.get("order", {})
     user = update.effective_user
-    order["id"] = str(uuid.uuid4())[:8].upper()
+    order["id"] = generate_order_id().lstrip("#")
     order["tg_id"] = user.id
     order["tg_username"] = user.username or ""
     order["tg_name"] = user.first_name or ""
@@ -814,6 +859,7 @@ def build_order_handler() -> ConversationHandler:
             A_NAME:    [MessageHandler(filters.TEXT & ~filters.COMMAND, a_name)],
             A_PHONE:   [MessageHandler(filters.TEXT & ~filters.COMMAND, a_phone)],
             A_CITY:    [MessageHandler(filters.TEXT & ~filters.COMMAND, a_city)],
+            A_NP_OFFICE: [MessageHandler(filters.TEXT & ~filters.COMMAND, a_np_office)],
             A_COMMENT: [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, a_comment),
                 CommandHandler("skip", a_skip_comment),

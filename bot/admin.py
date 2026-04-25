@@ -5,7 +5,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, List
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import ContextTypes, CallbackQueryHandler, MessageHandler, filters
+from telegram.ext import ContextTypes, CallbackQueryHandler, CommandHandler, MessageHandler, filters
 from core.config import ADMIN_IDS, DATA_DIR
 from core.conversation_logger import get_conversation_stats as get_stats
 from bot.admin_orders import (
@@ -264,9 +264,103 @@ async def handle_admin_callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         await handle_orders_callback(update, ctx)
 
 
+async def cmd_price(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    """Адмін: /price — показати ціни. /price 150 — змінити дефолтну. /price <плетіння> 160 — для конкретного."""
+    user = update.effective_user
+    if not is_admin(user.id):
+        return  # тиша для не-адмінів
+    
+    from core.pricing import load_pricing, save_pricing
+    
+    args = ctx.args or []
+    pricing = load_pricing()
+    
+    # /price без аргументів → показати всі ціни
+    if not args:
+        lines = ["💰 *Поточні ціни (грн/г):*\n"]
+        lines.append(f"📌 *Дефолт:* {pricing.get('default_price_per_gram', 155)}\n")
+        for price_str, weavings in sorted(pricing.get("weaving_prices", {}).items(), key=lambda x: int(x[0])):
+            lines.append(f"*{price_str} грн/г:* {', '.join(weavings)}")
+        lines.append("\n_Команди:_")
+        lines.append("`/price 150` — змінити дефолтну ціну")
+        lines.append("`/price Бісмарк 170` — змінити ціну для плетіння")
+        await update.message.reply_text("\n".join(lines), parse_mode="Markdown")
+        return
+    
+    # /price 150 → змінити дефолт
+    if len(args) == 1:
+        try:
+            new_price = float(args[0].replace(",", "."))
+        except ValueError:
+            await update.message.reply_text("❌ Невірне число. Приклад: `/price 150`", parse_mode="Markdown")
+            return
+        old_price = pricing.get("default_price_per_gram", 155)
+        pricing["default_price_per_gram"] = new_price
+        save_pricing(pricing)
+        log.info(f"Admin {user.id} змінив дефолтну ціну: {old_price} → {new_price}")
+        await update.message.reply_text(
+            f"✅ Дефолтна ціна змінена: *{old_price}* → *{new_price:.0f}* грн/г",
+            parse_mode="Markdown"
+        )
+        return
+    
+    # /price <плетіння> 160 → змінити ціну для плетіння
+    if len(args) >= 2:
+        try:
+            new_price = float(args[-1].replace(",", "."))
+        except ValueError:
+            await update.message.reply_text("❌ Останній аргумент має бути числом. Приклад: `/price Бісмарк 170`", parse_mode="Markdown")
+            return
+        weaving_name = " ".join(args[:-1]).strip()
+        weaving_lower = weaving_name.lower()
+        
+        # Знайти і видалити з поточної категорії
+        weaving_prices = pricing.get("weaving_prices", {})
+        found_in = None
+        for price_str, weavings in weaving_prices.items():
+            for w in weavings:
+                if w.lower() == weaving_lower:
+                    found_in = (price_str, w)
+                    break
+            if found_in:
+                break
+        
+        if not found_in:
+            available = []
+            for weavings in weaving_prices.values():
+                available.extend(weavings)
+            await update.message.reply_text(
+                f"❌ Плетіння *{weaving_name}* не знайдено.\n\n"
+                f"Доступні: {', '.join(available)}",
+                parse_mode="Markdown"
+            )
+            return
+        
+        old_price_str, real_name = found_in
+        weaving_prices[old_price_str].remove(real_name)
+        if not weaving_prices[old_price_str]:
+            del weaving_prices[old_price_str]
+        
+        # Додати в нову категорію
+        new_price_str = str(int(new_price))
+        if new_price_str not in weaving_prices:
+            weaving_prices[new_price_str] = []
+        weaving_prices[new_price_str].append(real_name)
+        
+        pricing["weaving_prices"] = weaving_prices
+        save_pricing(pricing)
+        log.info(f"Admin {user.id} змінив ціну {real_name}: {old_price_str} → {new_price_str}")
+        await update.message.reply_text(
+            f"✅ *{real_name}*: {old_price_str} → *{new_price_str}* грн/г",
+            parse_mode="Markdown"
+        )
+        return
+
+
 def create_admin_handlers():
     """Повертає список хендлерів для адміна."""
     return [
+        CommandHandler("price", cmd_price),
         CallbackQueryHandler(handle_admin_callback, pattern="^(admin_|trainer_|kb_)"),
         CallbackQueryHandler(handle_orders_callback, pattern="^(orders_|order_|set_status_|search_order|edit_order|delete_order|no_contact)"),
         MessageHandler(
