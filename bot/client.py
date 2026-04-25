@@ -178,7 +178,7 @@ async def cmd_help(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 async def handle_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     """Handle regular text messages with comprehensive error handling."""
     try:
-        from core.handoff import is_paused
+        from core.handoff import is_paused, safe_admin_send
         if is_paused(update.effective_chat.id):
             return
         user = update.effective_user
@@ -211,17 +211,14 @@ async def handle_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
             )
             username_str = f"@{user.username}" if user.username else user.first_name
             for admin_id in ADMIN_IDS:
-                try:
-                    await ctx.bot.send_message(admin_id,
+                await safe_admin_send(ctx, admin_id, lambda aid=admin_id: ctx.bot.send_message(aid,
                         f"🔔 КЛІЄНТ ПРОСИТЬ ЛЮДИНУ\n\n"
                         f"👤 {user.first_name} ({username_str})\n"
                         f"💬 «{text}»",
                         reply_markup=InlineKeyboardMarkup([[
                             InlineKeyboardButton("🤖 Повернути бота", callback_data=f"resume_{update.effective_chat.id}")
                         ]])
-                    )
-                except Exception as e:
-                    log.error(f"Handoff notify error: {e}")
+                ))
             from core.handoff import pause_bot
             pause_bot(update.effective_chat.id, reason=f"human: {', '.join(found_human)}")
             return
@@ -234,8 +231,7 @@ async def handle_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
             )
             username_str = f"@{user.username}" if user.username else user.first_name
             for admin_id in ADMIN_IDS:
-                try:
-                    await ctx.bot.send_message(admin_id,
+                await safe_admin_send(ctx, admin_id, lambda aid=admin_id: ctx.bot.send_message(aid,
                         f"🔔 СКЛАДНИЙ ВИРІБ\n\n"
                         f"👤 {user.first_name} ({username_str})\n"
                         f"💬 «{text}»\n"
@@ -243,9 +239,7 @@ async def handle_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
                         reply_markup=InlineKeyboardMarkup([[
                             InlineKeyboardButton("🤖 Повернути бота", callback_data=f"resume_{update.effective_chat.id}")
                         ]])
-                    )
-                except Exception as e:
-                    log.error(f"Handoff notify error: {e}")
+                ))
             from core.handoff import pause_bot
             pause_bot(update.effective_chat.id, reason=f"complex: {', '.join(found_complex)}")
             return

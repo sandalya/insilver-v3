@@ -14,6 +14,7 @@ from telegram.ext import (
     MessageHandler, filters, ContextTypes
 )
 from core.config import OWNER_CHAT_ID
+from core.handoff import safe_admin_send
 from core.order_context import extract_order_context
 from core.pricing import get_locks, calculate_price, format_price, get_price_per_gram
 from core.order_config import (
@@ -69,17 +70,14 @@ async def notify_owner(ctx, order: dict, user):
     if order.get('comment'):
         lines.append(f"💬 {order['comment']}")
 
-    try:
-        await ctx.bot.send_message(
-            OWNER_CHAT_ID,
+    await safe_admin_send(ctx, OWNER_CHAT_ID, lambda: ctx.bot.send_message(
+        OWNER_CHAT_ID,
             "\n".join(lines),
             parse_mode="Markdown",
             reply_markup=InlineKeyboardMarkup([[
                 InlineKeyboardButton("💬 Написати клієнту", url=f"tg://user?id={user.id}")
             ]])
-        )
-    except Exception as e:
-        log.error(f"Не вдалось надіслати сповіщення: {e}")
+    ))
 
 
 # ════════════════════════════════════════════════════════════════════════════════
@@ -739,17 +737,14 @@ async def nb_confirm(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         f"🔒 {lock}\n\n"
         f"{price_line}"
     )
-    try:
-        await ctx.bot.send_message(
-            OWNER_CHAT_ID,
+    await safe_admin_send(ctx, OWNER_CHAT_ID, lambda: ctx.bot.send_message(
+        OWNER_CHAT_ID,
             admin_text,
             parse_mode="Markdown",
             reply_markup=InlineKeyboardMarkup([[
                 InlineKeyboardButton("💬 Написати клієнту", url=f"tg://user?id={user.id}")
             ]])
-        )
-    except Exception as e:
-        log.error(f"Не вдалось надіслати адміну: {e}")
+    ))
     ctx.user_data.pop("order", None)
     return ConversationHandler.END
 
