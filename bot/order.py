@@ -801,6 +801,7 @@ def build_new_order_handler() -> ConversationHandler:
             CallbackQueryHandler(nb_cancel, pattern=r"^nb:cancel$"),
             CommandHandler("cancel", nb_cancel),
         ],
+        allow_reentry=True,
         per_user=True,
         per_chat=True,
     )
@@ -836,6 +837,7 @@ def build_order_handler() -> ConversationHandler:
             CallbackQueryHandler(cancel_order, pattern=r"^f:cancel$"),
             CommandHandler("cancel", cancel_order),
         ],
+        allow_reentry=True,
         per_user=True,
         per_chat=True,
     )
