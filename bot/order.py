@@ -26,9 +26,6 @@ log = logging.getLogger("bot.order")
 from core.config import ORDERS_FILE
 
 # ─── Стани ────────────────────────────────────────────────────────────────────
-# Режим A
-A_NAME, A_PHONE, A_CITY, A_COMMENT = range(4)
-A_NP_OFFICE = 16  # окремий стан, поза основним range щоб не зсувати B_*
 # Режим B — нові кроки воронки
 B_TYPE, B_STEP, B_CONFIRM = range(4, 7)
 # Нова лінійна воронка
@@ -81,73 +78,6 @@ async def notify_owner(ctx, order: dict, user):
                 InlineKeyboardButton("💬 Написати клієнту", url=f"tg://user?id={user.id}")
             ]])
     ))
-
-
-# ════════════════════════════════════════════════════════════════════════════════
-# РЕЖИМ A — коротка форма (кнопка під товаром)
-# ════════════════════════════════════════════════════════════════════════════════
-
-async def mode_a_start(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-
-    item_idx = int(query.data[len("o:"):])
-    ctx.user_data["order"] = {"_mode": "A", "item_idx": item_idx, "item_title": ""}
-
-    try:
-        from core.config import SITE_CATALOG
-        catalog = json.loads(Path(SITE_CATALOG).read_text(encoding="utf-8"))
-        item = catalog.get("items", [])[item_idx]
-        ctx.user_data["order"]["item_title"] = item.get("title", "")
-    except Exception as e:
-        log.warning(f"Не вдалось знайти товар: {e}")
-
-    title = ctx.user_data["order"]["item_title"]
-    await query.message.reply_text(
-        f"Оформлюємо замовлення:\n*{title}*\n\nЯк вас звати?",
-        parse_mode="Markdown",
-        reply_markup=InlineKeyboardMarkup([[
-            InlineKeyboardButton("❌ Скасувати", callback_data="f:cancel")
-        ]])
-    )
-    return A_NAME
-
-
-async def a_name(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    ctx.user_data["order"]["name"] = update.message.text.strip()
-    await update.message.reply_text("Ваш номер телефону:")
-    return A_PHONE
-
-
-async def a_phone(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    ctx.user_data["order"]["phone"] = update.message.text.strip()
-    await update.message.reply_text("Ваше місто:")
-    return A_CITY
-
-
-async def a_city(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    ctx.user_data["order"]["city"] = update.message.text.strip()
-    await update.message.reply_text("Номер відділення Нової Пошти?")
-    return A_NP_OFFICE
-
-
-async def a_np_office(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    ctx.user_data["order"]["np_office"] = update.message.text.strip()
-    await update.message.reply_text(
-        "Коментар? (або /skip):",
-        reply_markup=ReplyKeyboardRemove()
-    )
-    return A_COMMENT
-
-
-async def a_comment(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    ctx.user_data["order"]["comment"] = update.message.text.strip()
-    return await finish_order(update, ctx)
-
-
-async def a_skip_comment(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    ctx.user_data["order"]["comment"] = ""
-    return await finish_order(update, ctx)
 
 
 # ════════════════════════════════════════════════════════════════════════════════
@@ -867,20 +797,10 @@ def build_new_order_handler() -> ConversationHandler:
 def build_order_handler() -> ConversationHandler:
     return ConversationHandler(
         entry_points=[
-            CallbackQueryHandler(mode_a_start, pattern=r"^o:\d+$"),
             CallbackQueryHandler(mode_b_start, pattern=r"^order_full$"),
             CommandHandler("order", mode_b_start),
         ],
         states={
-            # Режим A
-            A_NAME:    [MessageHandler(filters.TEXT & ~filters.COMMAND, a_name)],
-            A_PHONE:   [MessageHandler(filters.TEXT & ~filters.COMMAND, a_phone)],
-            A_CITY:    [MessageHandler(filters.TEXT & ~filters.COMMAND, a_city)],
-            A_NP_OFFICE: [MessageHandler(filters.TEXT & ~filters.COMMAND, a_np_office)],
-            A_COMMENT: [
-                MessageHandler(filters.TEXT & ~filters.COMMAND, a_comment),
-                CommandHandler("skip", a_skip_comment),
-            ],
             # Режим B — один стан для всього
             B_TYPE: [CallbackQueryHandler(b_handle_button, pattern=r"^f:")],
             B_STEP: [
