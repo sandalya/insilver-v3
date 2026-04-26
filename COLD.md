@@ -100,3 +100,44 @@ tags: [documentation, ui, admin, commands, complete]
 - **Коміти:** 3e08482 (docs), cc26a05 (feat) — обидва --no-verify (pre-commit hook у BACKLOG)
 - **Smoke ✅:** /help, /admin_help, меню скрепки, toggle, PDF генерація
 Бот тепер production-ready по UI. Все готово до демо Владу: документація, команди, адмін-панель, меню. Залишилось: отримати фінальний pricing.json від Влада, фото ланцюжка, демо, опціональна Задача 6. BACKLOG: видалити /catalog (мертвий ендпоінт).
+
+---
+
+## 2026-04-26: Кнопка 'Замовити цей виріб' видалена, dead code режиму A убраний
+
+```yaml
+archivals_at: 2026-04-26
+reason: cleanup session, removed obsolete features
+tags: [cleanup, refactoring, mode-a]
+```
+
+Сесія 26.04 (початок) убрала технічний долг:
+- **Видалена кнопка 'Замовити цей виріб'** у каталозі (коміт 5f92c3b) — меню користувача було перегромаджено
+- **Видалено весь dead code режиму A** з bot/order.py (коміт 7fb3573): состояния mode_a_start, константи A_*, entry point, функції. Скорочено 901→821 рядків
+- **Видалено зламаний .git/hooks/pre-commit** (помилка на трьох неіснуючих файлах). Бекап збережений у /tmp/insilver-precommit-backup-20260426.sh
+- **Почищено BACKLOG:** видалено 2 дублі задачі про pre-commit hook, додано нову задачу 'InSilver voice reference extraction' з планом по 60 скрінах Влада
+
+**Статус:** Готово до наступної фази voice reference extraction.
+
+---
+
+## 2026-04-26: Voice reference extraction план (60 скрінів Влада з TG)
+
+```yaml
+archivals_at: 2026-04-26
+reason: planned new feature for training data collection
+tags: [voice-reference, training, pipeline, planning]
+```
+
+**Ініціатива:** InSilver voice reference extraction — зібрати реальні голосові ознаки ювелірних виробів від 60 скрінів розмов Влада з клієнтами у TG.
+
+**План обробки:**
+- Сашок експортує 60 скрінів з TG за 3 сесії (20 скрінів за раз)
+- Скрипт на Pi5 обробляє через Claude Vision API (виділення фото, тексту, контексту)
+- Результати → `data/docs/archive/voice_reference_real_clients_*.md` (3 файли)
+
+**Рекомендація:** Варіант Б — Telegram export + Pi5 скрипт через Claude Vision (найпростіший без ручної обробки).
+
+**Після voice reference:** перевірити чи `tests/real_client_cases.py` зроблений на основі цих 60 скрінів.
+
+**Статус:** Чекаємо на перший експорт від Сашка (20 скрінів). У планах на наступні сесії.

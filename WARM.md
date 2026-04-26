@@ -1,6 +1,6 @@
 ---
 project: insilver-v3
-updated: 2026-04-25
+updated: 2026-04-26
 ---
 
 # WARM — InSilver v3
@@ -243,10 +243,28 @@ status: complete
 
 `/admin` став toggle (вхід/вихід). Runtime state зберігається в `data/admin_active.json`, скидається при старті. Silent-ignore guards на /orders, /price, /done, /admin_help для не-адмінів. Коміт: cc26a05 (feat). **Готово.**
 
+## Voice reference extraction (нова ініціатива)
+
+```yaml
+last_touched: 2026-04-26
+tags: [voice, reference, training, pipeline]
+status: planning
+```
+
+**План:** InSilver voice reference extraction з 60 скрінів Влада з TG. **Спосіб:** Telegram export + Claude Vision на Pi5 скрипті (рекомендовано Б у плані).
+
+**Етапи:**
+1. Сашок експортує 60 скрінів з TG за 3 сесії (20 скрінів за раз) у приватне сховище
+2. Скрипт на Pi5 обробляє скрін через Claude Vision API → JSON з виділеними voice reference ознаками
+3. Результати зберігаються у `data/docs/archive/voice_reference_real_clients_*.md` (можливо 3 файли по 20 скрінів)
+4. Після цього перевірити чи `tests/real_client_cases.py` зроблений на основі цих 60 скрінів
+
+**Статус:** У плануванні. Очікуємо на перший експорт від Сашка.
+
 ## Roadmap (з implementation guide v003)
 
 ```yaml
-last_touched: 2026-04-25
+last_touched: 2026-04-26
 tags: [roadmap, planning]
 status: active
 ```
@@ -263,8 +281,9 @@ status: active
 1. **Демо Владу** — /admin, /orders, /price, /done, /help, /admin_help, меню скрепки
 2. **Отримати від Влада:** фінальний pricing.json, фото для ланцюжка
 3. **Документація PDF:** ADMIN_GUIDE.pdf + USER_GUIDE.pdf готові
-4. **Ультімейт-тест** — зі скрінів Влада як клієнт
-5. **Релізна перевірка** — pre-commit hook у BACKLOG, технічний чекліст 5/5 ✅
+4. **Voice reference extraction** — нова ініціатива (60 скрінів Влада)
+5. **Ультімейт-тест** — зі скрінів Влада як клієнт
+6. **Релізна перевірка** — pre-commit hook у BACKLOG, технічний чекліст 5/5 ✅
 
 **Потім (postrelease):**
 - Задача 6 (опціональна)
@@ -304,8 +323,8 @@ insilver-v3/
 │   ├── pricing.py       — калькулятор цін + /price команда
 │   ├── backup_system.py
 │   └── log_analyzer.py
-├── data/                — каталог, training.json (38 записів), pricing.json, docs/ (ADMIN_GUIDE.md, USER_GUIDE.md), admin_active.json
+├── data/                — каталог, training.json (38 записів), pricing.json, docs/ (ADMIN_GUIDE.md, USER_GUIDE.md), admin_active.json, archive/ (для voice_reference_*)
 ├── logs/
-├── tests/               — Ed QA тести
+├── tests/               — Ed QA тести, real_client_cases.py (очікуємо перевірки)
 └── scripts/
 ```

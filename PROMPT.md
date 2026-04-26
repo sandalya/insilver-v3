@@ -1,9 +1,13 @@
 Проект: insilver-v3
 
-**Стан:** v004 закрита (5/5 обов'язкових задач ✅). Бот production-ready по функціоналу. Адмінка допилена: /admin /orders CommandHandler'и, /done у trainer mode, view_knowledge з 👁 view + 🗑 del, kb_edit_<id> редагування, handle_trainer_photo graceful. Smoke all green. 38 записів у training.json.
+Стан: v004 закрита (5/5 обов'язкових задач), бот production-ready по функціоналу. Сесія 25.04 завершила: документація (ADMIN_GUIDE.md 382р + USER_GUIDE.md 224р + PDF), команди (/help /admin_help з MarkdownV2), меню скрепки (5 клієнт + 10 адмін), /admin toggle, doc_sender.py (md_to_telegram_v2 bulletproof). Коміти: 3e08482 (docs), cc26a05 (feat) — обидва --no-verify.
 
-**Наступне:** ADMIN_GUIDE.md + USER_GUIDE.md (фінальна причісування), фінальний pricing.json від Влада, демо Владу (/admin /orders /price функціонал), фото ланцюжка (поки тільки браслет), опціональна Задача 6.
+Що далі:
+1. Демо Владу: /admin, /orders, /price, /done, /help, /admin_help, меню, toggle
+2. Отримати: фінальний pricing.json, фото для ланцюжка
+3. Smoke final: PDF ADMIN_GUIDE.pdf + USER_GUIDE.pdf
+4. BACKLOG: видалити /catalog (мертвий ендпоінт)
 
-**Блокери:** pre-commit hook зламаний (у BACKLOG, --no-verify хід).
+Блокери: none. Pre-commit hook у BACKLOG (всі коміти --no-verify). Bот ready for demo.
 
-Поділися HOT.md + WARM.md з нового чату.
+У наступній сесії поділись HOT.md + WARM.md.
