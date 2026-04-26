@@ -25,7 +25,6 @@ LOGO_SIZE = 61514
 
 def order_keyboard(item: dict, idx: int) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton("🛒 Замовити цей виріб", callback_data=f"o:{idx}")],
         [InlineKeyboardButton("📝 Індивідуальне замовлення", callback_data="order_full")],
     ])
 
