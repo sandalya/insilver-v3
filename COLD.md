@@ -153,3 +153,15 @@ tags: [contact, config, markdown, fix]
 ```
 
 Сесія 27.04: InSilver контакт змінено з @gamaiunchik на @InSilver_925. **Процес:** MASTER_TELEGRAM у .env → переписуємо → рестарт сервісу. **Markdown-парсинг фіксня:** У bot/client.py (рядки 125, 159) додано backticks навколо {MASTER_TELEGRAM}: `` `{MASTER_TELEGRAM}` `` замість `{MASTER_TELEGRAM}`. Причина: underscore (_) у нічнику ламає Telegram MarkdownV2 парсер. **Централізація:** config.py читає з .env з fallback на @gamaiunchik — безпечна архітектура. **USER_GUIDE.md:** поки залишився @gamaiunchik, синхронізація окремо при необхідності. Бот готовий до демо Владу з оновленим контактом. Чекаємо: pricing.json, фото ланцюжка, підтвердження контакту.
+
+---
+
+## 2026-04-27: Dev інстанс @insilver_silvia_bot для тестування
+
+```yaml
+archivals_at: 2026-04-27
+reason: dev instance setup completed, awaiting verification and git push
+tags: [dev-instance, infrastructure, bot, setup]
+```
+
+Сесія 27.04 (друга половина): Створено dev інстанс `insilver-v3-dev` як повну копію prod для тестування на окремому боті @insilver_silvia_bot (окремий токен, старий revoked). **Інстанс:** `/home/sashok/.openclaw/workspace/insilver-v3-dev/` з повним кодом, data/, venv. **Сервіс:** `insilver-v3-dev.service` у `/etc/systemd/system/` (disabled, не enabled). **Статус:** getMe + getUpdates повертають ok=True, бот стартує чисто без помилок. **Next:** перевірити /start у @insilver_silvia_bot (правильне посилання), запустити dev сервіс, push dev гілку в origin. **Вторинна знахідка:** Prod токен @insilver_v3_bot має 75% Conflict 409 в логах — бот функціонально живий але потребує дослідження (revoke або копати зовнішні getUpdates) — окрема критична задача на наступну сесію.

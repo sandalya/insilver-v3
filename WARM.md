@@ -200,16 +200,30 @@ status: active
 ## Інфраструктура
 
 ```yaml
-last_touched: 2026-04-25
-tags: [infrastructure, deployment]
+last_touched: 2026-04-27
+tags: [infrastructure, deployment, dev-instance]
 status: active
 ```
 
-Сервіс: `insilver-v3.service` (systemd). Бот: `@insilver_v3_bot`. Health checker: `core/health.py`. Lock: `core/lock.py` (single process). Pi5, workspace `/home/sashok/.openclaw/workspace/insilver-v3/`.
+**Prod:** Сервіс `insilver-v3.service` (systemd). Бот `@insilver_v3_bot` (токен в /home/sashok/.openclaw/workspace/insilver-v3/.env). Workspace `/home/sashok/.openclaw/workspace/insilver-v3/`.
+
+**Dev (новий, сесія 27.04):**
+- Сервіс: `insilver-v3-dev.service` (systemd, disabled, не enabled)
+- Бот: `@insilver_silvia_bot` (окремий токен, старий revoked)
+- Workspace: `/home/sashok/.openclaw/workspace/insilver-v3-dev/` (повна копія коду + data + venv)
+- Статус: getMe + getUpdates ok=True, стартує чисто
+
+**Спільне:**
+- Health checker: `core/health.py`
+- Lock: `core/lock.py` (single process)
+- Pi5 платформа
+- Git гілка dev локально, не в origin
 
 **main.py:** httpx токен-логи закриті (сесія 25.04). **Глобальний імпорт Path:** додано в client.py (сесія 25.04).
 
 **pre-commit hook:** зламаний (посилається на 3 файли тестів, з яких 2 не існують). Рішення: всі коміти `--no-verify`. Фіксить: у BACKLOG.
+
+**ВАЖЛИВО — prod проблема:** @insilver_v3_bot має 75% Conflict 409 помилок у логах. Бот функціонально живий, але це не норма — потребує дослідження (revoke токена або копати зовнішні getUpdates).
 
 ## Документація
 
@@ -274,7 +288,7 @@ status: planning
 ## Roadmap (з implementation guide v003)
 
 ```yaml
-last_touched: 2026-04-26
+last_touched: 2026-04-27
 tags: [roadmap, planning]
 status: active
 ```
@@ -287,57 +301,73 @@ status: active
 - Задача 5 (4 нотифікації) — ✅ закрита (сесія 25.04 + 27.04)
 - Задача 6 (Summary у старій воронці) — опціональна
 
-**Поточні пріоритети (релізна фаза):**
-1. **Чекаємо підтвердження від Влада** — замовлення #20260427-1829 дійшло на @InSilver_925
-2. **Cleanup OWNER_CHAT_ID** — видалити з .env і core/config.py після підтвердження
-3. **Синхронізація USER_GUIDE.md** — @InSilver_925 у 2 місцях (якщо потрібна)
-4. **Демо Владу** — /admin, /orders, /price, /done, /help, /admin_help, меню скрепки, оновлений контакт @InSilver_925
-5. **Отримати від Влада:** фінальний pricing.json, фото для ланцюжка, підтвердження контакту @InSilver_925
-6. **Документація PDF:** ADMIN_GUIDE.pdf + USER_GUIDE.pdf готові
-7. **Voice reference extraction** — нова ініціатива (60 скрінів Влада)
-8. **Ультімейт-тест** — зі скрінів Влада як клієнт
-9. **Релізна перевірка** — pre-commit hook у BACKLOG, технічний чекліст 5/5 ✅
+**Поточні пріоритети (dev + prod analysis фаза):**
+1. **Перевірити dev інстанс** — /start у @insilver_silvia_bot (правильне посилання)
+2. **Запустити dev сервіс** — `systemctl start insilver-v3-dev.service` якщо ОК
+3. **Завести git dev гілку** — push в origin
+4. **Розібратися з prod Conflict 409** — дослідити логи @insilver_v3_bot (75% помилок)
+5. **Чекаємо підтвердження від Влада** — замовлення #20260427-1829 дійшло на @InSilver_925
+6. **Cleanup OWNER_CHAT_ID** — видалити з .env і core/config.py після підтвердження
+7. **Демо Владу** — /admin, /orders, /price, /done, /help, /admin_help, меню скрепки, оновлений контакт @InSilver_925
+8. **Отримати від Влада:** фінальний pricing.json, фото для ланцюжка, підтвердження контакту
+9. **Voice reference extraction** — 3 сесії по 20 скрінів (планується)
+10. **Ультімейт-тест** — зі скрінів Влада як клієнт
 
 **Потім (postrelease):**
 - Задача 6 (опціональна)
 - RAG замість training.json (+ фото в training records)
 - /catalog видалити (BACKLOG)
+- Pre-commit hook фіксить (BACKLOG)
 
 ## Layout проекту
 
 ```yaml
-last_touched: 2026-04-25
+last_touched: 2026-04-27
 tags: [layout, files]
 status: active
 ```
 
 ```
-insilver-v3/
-├── main.py              — точка входу (httpx токен-логи закриті, Path import глобальний, сесія 25.04)
+insilver-v3/                   (prod, Pi5)
+├── main.py
 ├── bot/
-│   ├── client.py        — обробка повідомлень + router + /price + COMPLEX_KEYWORDS + backticks навколо {MASTER_TELEGRAM} + trainer delegation (сесія 27.04)
-│   ├── order.py         — форма замовлення (стара, основна, allow_reentry=True, видалення попередніх, show_measure_button, ADMIN_IDS[0] нотифікації сесія 27.04)
-│   ├── admin.py         — адмін панель (safe_admin_send, CommandHandler, toggle, сесія 25.04)
-│   ├── admin_orders.py  — управління замовленнями (CommandHandler)
-│   └── doc_sender.py    — doc генерація й відправка (/help, /admin_help, PDF, сесія 25.04)
+│   ├── client.py
+│   ├── order.py
+│   ├── admin.py
+│   ├── admin_orders.py
+│   └── doc_sender.py
 ├── core/
-│   ├── ai.py            — Anthropic API
-│   ├── router.py        — intent classification
-│   ├── catalog.py       — пошук в каталозі
-│   ├── prompt.py        — системний промпт + guardrails (тільки text, не photo)
-│   ├── config.py        — конфігурація (ORDERS_FILE як Path, MASTER_TELEGRAM централізовано, ADMIN_IDS)
-│   ├── handoff.py       — human escalation (safe_admin_send, trainer delegation, сесія 25.04)
-│   ├── health.py        — health checker
-│   ├── conversation_logger.py
-│   ├── lock.py          — single process lock
-│   ├── order_config.py  — конфіг анкети (8 типів виробів)
-│   ├── order_context.py — автозаповнення з історії (prefilled → extract_order_context)
-│   ├── photo.py         — фото → адмін (trainer delegation, ADMIN_IDS[0] сесія 27.04)
-│   ├── pricing.py       — калькулятор цін + /price команда
-│   ├── backup_system.py
-│   └── log_analyzer.py
-├── data/                — каталог, training.json (38 записів), pricing.json, docs/ (ADMIN_GUIDE.md, USER_GUIDE.md), admin_active.json, archive/ (для voice_reference_*)
+│   ├── config.py            (MASTER_TELEGRAM, ADMIN_IDS, ORDERS_FILE)
+│   ├── router.py
+│   ├── prompt.py
+│   ├── handoff.py
+│   ├── photo.py             (ADMIN_IDS[0])
+│   ├── pricing.py
+│   ├── catalog.py
+│   ├── order_config.py
+│   ├── order_context.py
+│   ├── health.py
+│   ├── lock.py
+│   └── ...
+├── data/
+│   ├── pricing.json
+│   ├── training.json        (38 записів)
+│   ├── docs/
+│   ├── archive/             (voice_reference_*.md очікується)
+│   ├── admin_active.json
+│   └── handoff_state.json
 ├── logs/
-├── tests/               — Ed QA тести, real_client_cases.py (очікуємо перевірки)
+├── tests/
 └── scripts/
+
+insilver-v3-dev/             (dev, Pi5, новий сесія 27.04)
+├── main.py
+├── bot/
+├── core/
+├── data/
+└── ...
+
+ед systemd files:
+/etc/systemd/system/insilver-v3.service     (prod, active)
+/etc/systemd/system/insilver-v3-dev.service (dev, disabled, сесія 27.04)
 ```
