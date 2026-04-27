@@ -1,15 +1,13 @@
 Проект: insilver-v3
 
-Статус: Bot production-ready по функціоналу (v004 ✅ закрита). Готово до демо Владу: /admin toggle + /orders + /price + /done + trainer 👁/🗑, документація PDF, меню скрепки (5 клієнт + 10 адмін). Ed 10_order_funnel: 4 PASS ✅, 1 WARN, 1 FAIL (метадані).
+Сесія 27.04 завершена: оновлено контакт майстра на @InSilver_925 (змінено MASTER_TELEGRAM в .env, виправлено Markdown-парсинг у bot/client.py рядки 125, 159 — додано backticks навколо {MASTER_TELEGRAM} бо underscore ламає MarkdownV2). Бот production-ready по функціоналу (v004 5/5 задач ✅), dokumentacja PDF готова, Ed 10_order_funnel: 4 PASS + 1 WARN + 1 FAIL на метаданих.
 
-Чекаємо: фінальний pricing.json від Влада, фото ланцюжка, демо. Паралельно розпочата нова ініціатива: Voice reference extraction (60 скрінів Влада з TG → Claude Vision на Pi5 → data/docs/archive/).
+**Наступне:**
+1. Демо Владу з оновленим контактом @InSilver_925 (показати /admin, /orders, /price, /done, меню скрепки)
+2. Отримати від Влада: фінальний pricing.json, фото для ланцюжка, підтвердження контакту
+3. Якщо Влад наполягає — синхронізувати @InSilver_925 в USER_GUIDE.md
+4. Voice reference extraction: Сашок експортує 60 скрінів з TG (3 сесії по 20), потім Pi5 обробляє через Claude Vision → data/docs/archive/
 
-Що робити далі:
-1. Демо Владу (по готовності)
-2. Voice reference extraction: Сашок експортує 60 скрінів з TG за 3 сесії, потім скрипт транскрибує
-3. Перевірити tests/real_client_cases.py — чи базується на тих 60 скрінах
-4. BACKLOG: видалити /catalog (не потрібен)
+**Блокери:** pricing.json, фото ланцюжка від Влада. Pre-commit hook у BACKLOG (всі коміти --no-verify).
 
-Блокер: Чекаємо від Влада фото ланцюжка. Pre-commit hook у BACKLOG (всі коміти --no-verify).
-
-Передай HOT.md + WARM.md на наступну сесію.
+Поділися HOT.md + WARM.md для контексту. Додаток: MEMORY.md (read-only).

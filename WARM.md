@@ -33,7 +33,7 @@ tags: [order, funnel, ui]
 status: active
 ```
 
-**Основна (стара, `build_order_handler`)** — зареєстрована ПЕРШОЮ в `setup_handlers`. `bot/order.py` + `core/order_config.py` + `core/order_context.py` (автозаповнення з історії). 8 типів виробів: ланцюжок, браслет, хрестик, кулон, обручка, перстень, набір, інше. Кожен тип має свої кроки (напр. ланцюжок: плетіння→довжина→маса→покриття→застібка→додатково→контакт→коментар→**Summary+Confirm**). Кнопки "⬅️ Назад" і "❌ Скасувати" на кожному кроці. `_waiting_custom` для обробки "✏️ Інше" — бот просить текстовий ввід. **Summary+Confirm крок готовий** (сесія 22.04). **Задача 1 (Інше) підтверджена** (сесія 25.04). **allow_reentry=True закрито** (сесія 25.04) — дозволяє повторний вхід у воронку після завершення. **COMPLEX_KEYWORDS захист** (сесія 25.04) — комплект/каблучка/перстень/вушко → handoff. **show_measure_button** для браслета з фото (hand_measure_1.jpg, hand_measure_2.jpg), для ланцюжка text-fallback HOW_TO_MEASURE.
+**Основна (стара, `build_order_handler`)** — зареєстрована ПЕРШОЮ в `setup_handlers`. `bot/order.py` + `core/order_config.py` + `core/order_context.py` (автозаповнення з історії). 8 типів виробів: ланцюжок, браслет, хрестик, кулон, обручка, перстень, набір, інше. Кожен тип має свої кроки (напр. ланцюжок: плетіння→довжина→маса→покриття→застібка→додатково→контакт→коментар→**Summary+Confirm**). Кнопки "⬅️ Назад" і "❌ Скасувати" на кожному кроці. `_waiting_custom` для обробки "✏️ Інше" — бот просить текстовий ввід. **Summary+Confirm крок готовий** (сесія 22.04). **Задача 1 (Інше) підтверджена** (сесія 25.04). **allow_reentry=True закрито** (сесія 25.04) — дозволяє повторний вхід у воронку після завершення. **COMPLEX_KEYWORDS захист** (сесія 25.04) — комплект/каблучка/перстень/вушко → handoff. **show_measure_button** для браслета з фото (hand_measure_1.jpg, hand_measure_2.jpg), для ланцюжка text-fallback HOW_TO_MEASURE. **Нотифікації замовлення** (сесія 27.04) — замінено 4 входження OWNER_CHAT_ID на ADMIN_IDS[0].
 
 **Нова (nb_*, `build_new_order_handler`)** — зареєстрована ДРУГОЮ (запасна). Тільки ланцюжок/браслет. Має калькулятор і summary перед підтвердженням.
 
@@ -91,7 +91,7 @@ tags: [handoff, admin]
 status: done
 ```
 
-`core/handoff.py` — pause/resume. `handle_photo` — фото → адміну + пауза. `handle_resume` — callback для адміна. Ed тести `09_handoff` — green. Handoff warmup протестовано (сесія 22.04). **safe_admin_send helper з warmup** (сесія 25.04) — тепер 'Chat not found' не критична помилка. **Замінено 4 точки нотифікацій адміна** (сесія 25.04): order.py x2, client.py x2. Між Ed-блоками треба скидати `data/handoff_state.json` → `{}`. **handle_photo делегує управління якщо ctx.user_data.trainer присутній** (сесія 25.04).
+`core/handoff.py` — pause/resume. `handle_photo` — фото → адміну + пауза. `handle_resume` — callback для адміна. Ed тести `09_handoff` — green. Handoff warmup протестовано (сесія 22.04). **safe_admin_send helper з warmup** (сесія 25.04) — тепер 'Chat not found' не критична помилка. **Замінено 4 точки нотифікацій адміна** (сесія 25.04 + 27.04): order.py x2 (сесія 27.04), client.py x2 (сесія 25.04). Між Ed-блоками треба скидати `data/handoff_state.json` → `{}`. **handle_photo делегує управління якщо ctx.user_data.trainer присутній** (сесія 25.04).
 
 ## Адмін-картка з НП
 
@@ -141,7 +141,7 @@ tags: [admin, ui, commands]
 status: ready_for_demo
 ```
 
-`bot/admin.py` — адмін панель (279 рядків). `bot/admin_orders.py` — управління замовленнями. Команди: `/admin`, `/orders`. **Обидві команди зареєстровані як CommandHandler** (сесія 25.04). **Адмін нотифікації оновлені** (сесія 25.04) — 4 точки замінені на safe_admin_send. **Готово до демо Владу**.
+`bot/admin.py` — адмін панель (279 рядків). `bot/admin_orders.py` — управління замовленнями. Команди: `/admin`, `/orders`. **Обидві команди зареєстровані як CommandHandler** (сесія 25.04). **Адмін нотифікації оновлені** (сесія 25.04 + 27.04) — замінено OWNER_CHAT_ID на ADMIN_IDS[0] у bot/order.py (сесія 27.04). **Готово до демо Владу**.
 
 ## Trainer mode (knowledge base training)
 
@@ -187,15 +187,15 @@ Ed QA agent (`workspace/ed/`). Target: `@insilver_v3_bot`. Запуск: `cd ~/.
 
 **Результати сесія 25.04:** Всі обов'язкові задачи v004 закриті, Ed готовий до демо.
 
-## Контакт майстра (MASTER_TELEGRAM)
+## Контакт майстра (MASTER_TELEGRAM) та нотифікації адміна (ADMIN_IDS)
 
 ```yaml
 last_touched: 2026-04-27
-tags: [contact, config, communication]
+tags: [contact, config, communication, admin]
 status: active
 ```
 
-**MASTER_TELEGRAM** централізовано управляється через `core/config.py`: `os.getenv('MASTER_TELEGRAM', '@gamaiunchik')`. Сесія 27.04: змінено на `@InSilver_925` у .env. Markdown-парсинг виправлено у `bot/client.py` (рядки 125, 159) — додано backticks навколо змінної: `` `{MASTER_TELEGRAM}` `` замість `{MASTER_TELEGRAM}`, бо underscore (_) ламає MarkdownV2 парсер. **Зміна:** тільки через .env + рестарт сервісу, fallback залишається `@gamaiunchik`. USER_GUIDE.md поки не оновлений — якщо потрібна синхронізація, окремо замінити там.
+**MASTER_TELEGRAM** централізовано управляється через `core/config.py`: `os.getenv('MASTER_TELEGRAM', '@gamaiunchik')`. Сесія 27.04: змінено на `@InSilver_925` у .env. Markdown-парсинг виправлено у `bot/client.py` (рядки 125, 159) — додано backticks навколо змінної: `` `{MASTER_TELEGRAM}` `` замість `{MASTER_TELEGRAM}`, бо underscore (_) ламає MarkdownV2 парсер. **Нотифікації замовлення:** замінено 4 входження OWNER_CHAT_ID на ADMIN_IDS[0] у bot/order.py (сесія 27.04) — адміна відповідно повідомлюється на особистий чат (467578687). **ADMIN_IDS** = [467578687, 189793675] (Влад перший адмін). **Зміна:** тільки через .env + рестарт сервісу, fallback залишається `@gamaiunchik`. **USER_GUIDE.md:** поки не оновлений — синхронізація окремо після підтвердження від Влада. Cleanup OWNER_CHAT_ID у WARM.md у наступній сесії, коли буде підтвердження.
 
 ## Інфраструктура
 
@@ -284,19 +284,21 @@ status: active
 - Задача 2 (частково) — ✅ закрита (сесія 22.04)
 - Задача 3 (allow_reentry) — ✅ закрита (сесія 25.04)
 - Задача 4 (safe_admin_send) — ✅ закрита (сесія 25.04)
-- Задача 5 (4 нотифікації) — ✅ закрита (сесія 25.04)
+- Задача 5 (4 нотифікації) — ✅ закрита (сесія 25.04 + 27.04)
 - Задача 6 (Summary у старій воронці) — опціональна
 
 **Поточні пріоритети (релізна фаза):**
-1. **Демо Владу** — /admin, /orders, /price, /done, /help, /admin_help, меню скрепки, оновлений контакт @InSilver_925
-2. **Отримати від Влада:** фінальний pricing.json, фото для ланцюжка, підтвердження контакту @InSilver_925
-3. **Документація PDF:** ADMIN_GUIDE.pdf + USER_GUIDE.pdf готові
-4. **Voice reference extraction** — нова ініціатива (60 скрінів Влада)
-5. **Ультімейт-тест** — зі скрінів Влада як клієнт
-6. **Релізна перевірка** — pre-commit hook у BACKLOG, технічний чекліст 5/5 ✅
+1. **Чекаємо підтвердження від Влада** — замовлення #20260427-1829 дійшло на @InSilver_925
+2. **Cleanup OWNER_CHAT_ID** — видалити з .env і core/config.py після підтвердження
+3. **Синхронізація USER_GUIDE.md** — @InSilver_925 у 2 місцях (якщо потрібна)
+4. **Демо Владу** — /admin, /orders, /price, /done, /help, /admin_help, меню скрепки, оновлений контакт @InSilver_925
+5. **Отримати від Влада:** фінальний pricing.json, фото для ланцюжка, підтвердження контакту @InSilver_925
+6. **Документація PDF:** ADMIN_GUIDE.pdf + USER_GUIDE.pdf готові
+7. **Voice reference extraction** — нова ініціатива (60 скрінів Влада)
+8. **Ультімейт-тест** — зі скрінів Влада як клієнт
+9. **Релізна перевірка** — pre-commit hook у BACKLOG, технічний чекліст 5/5 ✅
 
 **Потім (postrelease):**
-- Синхронізація USER_GUIDE.md з @InSilver_925 (якщо потрібна)
 - Задача 6 (опціональна)
 - RAG замість training.json (+ фото в training records)
 - /catalog видалити (BACKLOG)
@@ -314,7 +316,7 @@ insilver-v3/
 ├── main.py              — точка входу (httpx токен-логи закриті, Path import глобальний, сесія 25.04)
 ├── bot/
 │   ├── client.py        — обробка повідомлень + router + /price + COMPLEX_KEYWORDS + backticks навколо {MASTER_TELEGRAM} + trainer delegation (сесія 27.04)
-│   ├── order.py         — форма замовлення (стара, основна, allow_reentry=True, видалення попередніх, show_measure_button)
+│   ├── order.py         — форма замовлення (стара, основна, allow_reentry=True, видалення попередніх, show_measure_button, ADMIN_IDS[0] нотифікації сесія 27.04)
 │   ├── admin.py         — адмін панель (safe_admin_send, CommandHandler, toggle, сесія 25.04)
 │   ├── admin_orders.py  — управління замовленнями (CommandHandler)
 │   └── doc_sender.py    — doc генерація й відправка (/help, /admin_help, PDF, сесія 25.04)
@@ -323,14 +325,14 @@ insilver-v3/
 │   ├── router.py        — intent classification
 │   ├── catalog.py       — пошук в каталозі
 │   ├── prompt.py        — системний промпт + guardrails (тільки text, не photo)
-│   ├── config.py        — конфігурація (ORDERS_FILE як Path, MASTER_TELEGRAM централізовано)
+│   ├── config.py        — конфігурація (ORDERS_FILE як Path, MASTER_TELEGRAM централізовано, ADMIN_IDS)
 │   ├── handoff.py       — human escalation (safe_admin_send, trainer delegation, сесія 25.04)
 │   ├── health.py        — health checker
 │   ├── conversation_logger.py
 │   ├── lock.py          — single process lock
 │   ├── order_config.py  — конфіг анкети (8 типів виробів)
 │   ├── order_context.py — автозаповнення з історії (prefilled → extract_order_context)
-│   ├── photo.py         — фото → адмін (trainer delegation)
+│   ├── photo.py         — фото → адмін (trainer delegation, ADMIN_IDS[0] сесія 27.04)
 │   ├── pricing.py       — калькулятор цін + /price команда
 │   ├── backup_system.py
 │   └── log_analyzer.py

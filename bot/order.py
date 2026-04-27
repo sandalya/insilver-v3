@@ -13,7 +13,7 @@ from telegram.ext import (
     ConversationHandler, CallbackQueryHandler, CommandHandler,
     MessageHandler, filters, ContextTypes
 )
-from core.config import OWNER_CHAT_ID
+from core.config import ADMIN_IDS
 from core.handoff import safe_admin_send
 from core.order_context import extract_order_context
 from core.pricing import get_locks, calculate_price, format_price, get_price_per_gram
@@ -71,8 +71,8 @@ async def notify_owner(ctx, order: dict, user):
     if order.get('comment'):
         lines.append(f"💬 {order['comment']}")
 
-    await safe_admin_send(ctx, OWNER_CHAT_ID, lambda: ctx.bot.send_message(
-        OWNER_CHAT_ID,
+    await safe_admin_send(ctx, ADMIN_IDS[0], lambda: ctx.bot.send_message(
+        ADMIN_IDS[0],
             "\n".join(lines),
             reply_markup=InlineKeyboardMarkup([[
                 InlineKeyboardButton("💬 Написати клієнту", url=f"tg://user?id={user.id}")
@@ -729,8 +729,8 @@ async def nb_confirm(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         f"🔒 {lock}\n\n"
         f"{price_line}"
     )
-    await safe_admin_send(ctx, OWNER_CHAT_ID, lambda: ctx.bot.send_message(
-        OWNER_CHAT_ID,
+    await safe_admin_send(ctx, ADMIN_IDS[0], lambda: ctx.bot.send_message(
+        ADMIN_IDS[0],
             admin_text,
             parse_mode="Markdown",
             reply_markup=InlineKeyboardMarkup([[
