@@ -122,7 +122,7 @@ async def handle_callback_query(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     
     if query.data == "contact_master":
         response = "📱 **Контакти майстерні InSilver:**\n\n" + \
-                  f"🟢 **Telegram майстра:** {MASTER_TELEGRAM}\n" + \
+                  f"🟢 **Telegram майстра:** `{MASTER_TELEGRAM}`\n" + \
                   f"🌐 **Сайт:** {WEBSITE_URL}\n" + \
                   "⏰ **Робочі години:** Пн-Пт 9:00-18:00\n\n" + \
                   "💬 **Для консультацій** з технічних питань, особливостей виготовлення або індивідуальних замовлень пишіть напряму майстру.\n\n" + \
@@ -156,7 +156,7 @@ async def cmd_contact(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     """Handle /contact command."""
     response = "📱 **Контакти InSilver:**\n\n" + \
               f"🌐 **Сайт:** {WEBSITE_URL}\n" + \
-              f"🟢 **Telegram майстра:** {MASTER_TELEGRAM}\n" + \
+              f"🟢 **Telegram майстра:** `{MASTER_TELEGRAM}`\n" + \
               "⏰ **Робочі години:** Пн-Пт 9:00-18:00\n\n" + \
               "📞 **Для термінових питань** пишіть в особисті повідомлення майстру.\n" + \
               "🛠️ **Технічні консультації** та особливості виготовлення."

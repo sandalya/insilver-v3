@@ -1,6 +1,6 @@
 ---
 project: insilver-v3
-updated: 2026-04-26
+updated: 2026-04-27
 ---
 
 # WARM — InSilver v3
@@ -187,6 +187,16 @@ Ed QA agent (`workspace/ed/`). Target: `@insilver_v3_bot`. Запуск: `cd ~/.
 
 **Результати сесія 25.04:** Всі обов'язкові задачи v004 закриті, Ed готовий до демо.
 
+## Контакт майстра (MASTER_TELEGRAM)
+
+```yaml
+last_touched: 2026-04-27
+tags: [contact, config, communication]
+status: active
+```
+
+**MASTER_TELEGRAM** централізовано управляється через `core/config.py`: `os.getenv('MASTER_TELEGRAM', '@gamaiunchik')`. Сесія 27.04: змінено на `@InSilver_925` у .env. Markdown-парсинг виправлено у `bot/client.py` (рядки 125, 159) — додано backticks навколо змінної: `` `{MASTER_TELEGRAM}` `` замість `{MASTER_TELEGRAM}`, бо underscore (_) ламає MarkdownV2 парсер. **Зміна:** тільки через .env + рестарт сервісу, fallback залишається `@gamaiunchik`. USER_GUIDE.md поки не оновлений — якщо потрібна синхронізація, окремо замінити там.
+
 ## Інфраструктура
 
 ```yaml
@@ -211,7 +221,7 @@ status: complete
 
 **ADMIN_GUIDE.md** — 382 рядки. Зміст: /admin, /orders, /price, /done flow, trainer 👁/✏️, адмін-картка з НП, HANDOFF, чекліст. **Готово.**
 
-**USER_GUIDE.md** — 224 рядки. Зміст: формальне 'ви', 8 типів виробів, HOW_TO_MEASURE, #YYYYMMDD-HHMM, Нова Пошта, /help, /order, /contact. **Готово.**
+**USER_GUIDE.md** — 224 рядки. Зміст: формальне 'ви', 8 типів виробів, HOW_TO_MEASURE, #YYYYMMDD-HHMM, Нова Пошта, /help, /order, /contact. **Готово.** *Примітка: поки містить @gamaiunchik як контакт, синхронізація з @InSilver_925 окремо при необхідності.*
 
 **PDF генерація:** pandoc + chromium headless (Pi5, сірий фон #f5f5f5, Noto Color Emoji). **Готово.**
 
@@ -278,14 +288,15 @@ status: active
 - Задача 6 (Summary у старій воронці) — опціональна
 
 **Поточні пріоритети (релізна фаза):**
-1. **Демо Владу** — /admin, /orders, /price, /done, /help, /admin_help, меню скрепки
-2. **Отримати від Влада:** фінальний pricing.json, фото для ланцюжка
+1. **Демо Владу** — /admin, /orders, /price, /done, /help, /admin_help, меню скрепки, оновлений контакт @InSilver_925
+2. **Отримати від Влада:** фінальний pricing.json, фото для ланцюжка, підтвердження контакту @InSilver_925
 3. **Документація PDF:** ADMIN_GUIDE.pdf + USER_GUIDE.pdf готові
 4. **Voice reference extraction** — нова ініціатива (60 скрінів Влада)
 5. **Ультімейт-тест** — зі скрінів Влада як клієнт
 6. **Релізна перевірка** — pre-commit hook у BACKLOG, технічний чекліст 5/5 ✅
 
 **Потім (postrelease):**
+- Синхронізація USER_GUIDE.md з @InSilver_925 (якщо потрібна)
 - Задача 6 (опціональна)
 - RAG замість training.json (+ фото в training records)
 - /catalog видалити (BACKLOG)
@@ -302,7 +313,7 @@ status: active
 insilver-v3/
 ├── main.py              — точка входу (httpx токен-логи закриті, Path import глобальний, сесія 25.04)
 ├── bot/
-│   ├── client.py        — обробка повідомлень + router + /price + COMPLEX_KEYWORDS + Path import + trainer delegation
+│   ├── client.py        — обробка повідомлень + router + /price + COMPLEX_KEYWORDS + backticks навколо {MASTER_TELEGRAM} + trainer delegation (сесія 27.04)
 │   ├── order.py         — форма замовлення (стара, основна, allow_reentry=True, видалення попередніх, show_measure_button)
 │   ├── admin.py         — адмін панель (safe_admin_send, CommandHandler, toggle, сесія 25.04)
 │   ├── admin_orders.py  — управління замовленнями (CommandHandler)
@@ -312,7 +323,7 @@ insilver-v3/
 │   ├── router.py        — intent classification
 │   ├── catalog.py       — пошук в каталозі
 │   ├── prompt.py        — системний промпт + guardrails (тільки text, не photo)
-│   ├── config.py        — конфігурація (ORDERS_FILE як Path)
+│   ├── config.py        — конфігурація (ORDERS_FILE як Path, MASTER_TELEGRAM централізовано)
 │   ├── handoff.py       — human escalation (safe_admin_send, trainer delegation, сесія 25.04)
 │   ├── health.py        — health checker
 │   ├── conversation_logger.py

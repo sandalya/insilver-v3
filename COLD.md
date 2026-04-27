@@ -141,3 +141,15 @@ tags: [voice-reference, training, pipeline, planning]
 **Після voice reference:** перевірити чи `tests/real_client_cases.py` зроблений на основі цих 60 скрінів.
 
 **Статус:** Чекаємо на перший експорт від Сашка (20 скрінів). У планах на наступні сесії.
+
+---
+
+## 2026-04-27: Оновлення контакту майстра на @InSilver_925 + Markdown-фіксня
+
+```yaml
+archived_at: 2026-04-27
+reason: session complete, contact master update + markdown parser fix
+tags: [contact, config, markdown, fix]
+```
+
+Сесія 27.04: InSilver контакт змінено з @gamaiunchik на @InSilver_925. **Процес:** MASTER_TELEGRAM у .env → переписуємо → рестарт сервісу. **Markdown-парсинг фіксня:** У bot/client.py (рядки 125, 159) додано backticks навколо {MASTER_TELEGRAM}: `` `{MASTER_TELEGRAM}` `` замість `{MASTER_TELEGRAM}`. Причина: underscore (_) у нічнику ламає Telegram MarkdownV2 парсер. **Централізація:** config.py читає з .env з fallback на @gamaiunchik — безпечна архітектура. **USER_GUIDE.md:** поки залишився @gamaiunchik, синхронізація окремо при необхідності. Бот готовий до демо Владу з оновленим контактом. Чекаємо: pricing.json, фото ланцюжка, підтвердження контакту.
